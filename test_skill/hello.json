@@ -1,0 +1,10 @@
+{
+  "name": "hello",
+  "description": "Тестовый Python-навык. Отвечает 'Привет, мир!'",
+  "version": "1.0",
+  "type": "python",
+  "mainScript": "hello.py",
+  "triggers": ["привет", "hello", "hi", "здравствуй"],
+  "timeout": 10,
+  "enabled": true
+}

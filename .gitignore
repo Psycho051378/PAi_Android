@@ -1,0 +1,53 @@
+# Android / Kotlin
+*.class
+*.dex
+*.apk
+*.aab
+*.ap_
+*.aab_
+*.jar
+*.aar
+*.war
+
+# Build artifacts
+/build
+/app/build
+.gradle
+local.properties
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Keystore
+*.keystore
+*.jks
+*.bks
+
+# Generated files
+/app/src/main/assets/
+/app/src/main/res/raw/
+/captures
+
+# Environment
+.env
+.env.local
+
+# Debug / temp files
+*.log
+*.txt
+*.html
+memory/
+log.txt
+temp_log.txt
+tmp_log.txt

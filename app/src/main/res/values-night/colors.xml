@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material Design 3 color palette for night mode -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="purple_container">#FF3700B3</color>
+    <color name="on_purple_container">#FFFFFFFF</color>
+    
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="teal_container">#FF018786</color>
+    <color name="on_teal_container">#FF000000</color>
+    
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Surface colors -->
+    <color name="surface">#FF121212</color>
+    <color name="on_surface">#FFFFFFFF</color>
+    <color name="surface_variant">#FF424242</color>
+    <color name="on_surface_variant">#FFE0E0E0</color>
+    
+    <!-- Background colors -->
+    <color name="background">#FF121212</color>
+    <color name="on_background">#FFFFFFFF</color>
+    
+    <!-- Error colors -->
+    <color name="error">#FFCF6679</color>
+    <color name="on_error">#FF000000</color>
+    <color name="error_container">#FFB00020</color>
+    <color name="on_error_container">#FFFFFFFF</color>
+</resources>

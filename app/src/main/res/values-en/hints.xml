@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hint_settings_language">Select the app interface language. The change takes effect immediately after the screen restarts.</string>
+    <string name="hint_settings_ai_providers">Configure API keys and models for AI providers. DeepSeek, OpenAI and others are supported. Without a key, the app cannot process requests.</string>
+    <string name="hint_settings_roles">Roles define the system prompt — AI behavior. You can create multiple roles with different personalities and switch between them in chat.</string>
+    <string name="hint_settings_web_search">Enable web search so AI can find up-to-date information online. Google Custom Search, Tavily, and built-in DuckDuckGo (no key required) are available.</string>
+    <string name="hint_settings_appearance">Customize theme (light/dark/system), Material You dynamic colors (Android 12+), and accent color.</string>
+    <string name="hint_settings_proactive">Proactive mode automatically reminds you of calendar events, low battery, and important notifications. Quiet hours and priority threshold can be configured.</string>
+    <string name="hint_settings_memory">Manage AI long-term memory: user facts, daily entries, export and import data. Memory helps AI better understand context.</string>
+    <string name="hint_settings_scheduler">Configure scheduled tasks — daily reports, monitoring, reminders. Tasks run in the background.</string>
+    <string name="hint_settings_skill_store">Install external skills from the store or via URL. Skills extend AI capabilities: weather, news, home control.</string>
+    <string name="hint_settings_voice">Configure voice control: wake word for activation, speech recognition (Vosk), speech synthesis (TTS).</string>
+    <string name="hint_settings_logs">View agent logs in real time. Useful for debugging and monitoring AI operation.</string>
+    <string name="hint_chat_detail_voice">Tap the microphone to input a message by voice. Recognition runs on-device via Vosk.</string>
+    <string name="hint_chat_detail_camera">Take a photo or select one from the gallery. AI can analyze the image and describe it.</string>
+    <string name="hint_chat_detail_file">Attach a file: image, document, audio, or code. AI supports analysis of various formats.</string>
+    <string name="hint_chat_detail_code">Use the code copy button for quick copying. Code can be saved to a separate file.</string>
+    <string name="hint_memory_fact">Facts are key information about you that AI remembers. You can add, edit, and delete facts manually.</string>
+    <string name="hint_memory_export">Export memory to Markdown for backup or transfer to another device. Import supports the same format.</string>
+
+    <!-- Provider field hints -->
+    <string name="hint_provider_api_key">An API key is required to access the AI provider. You can obtain a key from your provider dashboard. Keep your key secure.</string>
+    <string name="hint_provider_api_key_deepseek">Generate an API key on the DeepSeek API keys page: https://platform.deepseek.com/api_keys</string>
+    <string name="hint_provider_api_key_openai">Generate an API key on the OpenAI API keys page: https://platform.openai.com/api-keys</string>
+    <string name="hint_provider_model">The AI model name used to process requests. Check the latest models on the provider\'s website.</string>
+    <string name="hint_provider_model_deepseek">DeepSeek models and pricing: https://api-docs.deepseek.com/quick_start/pricing#model-details</string>
+    <string name="hint_provider_model_openai">List of available OpenAI models: https://platform.openai.com/docs/models</string>
+    <string name="hint_provider_base_url">Base URL for the API endpoint. Usually auto-filled when selecting a provider, but can be changed for custom endpoints.</string>
+</resources>

@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">PAi Android</string>
+    <string name="loading">Loading…</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="close">Close</string>
+    <string name="back">Back</string>
+    <string name="ok">OK</string>
+
+    <!-- LoginScreen / Auth -->
+    <string name="login_title">Login</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="login_button">Sign In</string>
+    <string name="login_register">Register</string>
+
+    <!-- ChatListScreen -->
+    <string name="chat_list_title">Chats</string>
+    <string name="chat_list_new">New Chat</string>
+    <string name="chat_list_delete_title">Delete chat?</string>
+    <string name="chat_list_delete_message">Chat "%s" and all its messages will be permanently deleted.</string>
+    <string name="chat_list_empty">No messages yet. Write something to start a conversation.</string>
+    <string name="chat_list_unnamed">Untitled</string>
+    <string name="chat_list_today">Today</string>
+    <string name="chat_list_yesterday">Yesterday</string>
+    <string name="chat_list_this_week">This Week</string>
+    <string name="chat_list_this_month">This Month</string>
+    <string name="chat_list_earlier">Earlier</string>
+    <string name="chat_list_archive">Archive</string>
+    <string name="chat_list_collapse">Collapse</string>
+    <string name="chat_list_expand">Expand</string>
+    <string name="chat_item_messages">Messages: %d • %s</string>
+    <string name="chat_item_active">Active</string>
+    <string name="chat_item_archived">Archived</string>
+    <string name="chat_item_updated">Updated: %s</string>
+    <string name="chat_item_archive">Archive</string>
+    <string name="chat_item_unarchive">Unarchive</string>
+
+    <!-- ChatDetailScreen -->
+    <string name="chat_detail_unnamed">Untitled</string>
+    <string name="chat_detail_empty">No messages yet\nStart a conversation</string>
+    <string name="chat_detail_input_hint">Type a message…</string>
+    <string name="chat_detail_send">Send</string>
+    <string name="chat_detail_you">You</string>
+    <string name="chat_detail_assistant">Assistant</string>
+    <string name="chat_detail_copy">Copy</string>
+    <string name="chat_detail_copy_code">Copy code</string>
+    <string name="chat_detail_resend">Resend</string>
+    <string name="chat_detail_regenerate">Regenerate</string>
+    <string name="chat_detail_save_to_file">Save to file</string>
+    <string name="chat_detail_save_code">Save code to file</string>
+    <string name="chat_detail_save_response">Save response</string>
+    <string name="chat_detail_stop_recording">Stop recording</string>
+    <string name="chat_detail_voice_input">Voice input</string>
+    <string name="chat_detail_camera">Camera</string>
+    <string name="chat_detail_attach_file">Attach file</string>
+    <string name="chat_detail_remove_attachment">Remove attachment</string>
+    <string name="chat_detail_open">Open</string>
+    <string name="chat_detail_unnamed_file">Unnamed</string>
+    <string name="chat_detail_file_not_found">File not found: %s</string>
+    <string name="chat_detail_cant_open_file">Could not open file: %s</string>
+    <string name="chat_detail_file_error">File processing error: %s</string>
+
+    <!-- RoleDropdownMenu -->
+    <string name="role_select_prompt">Select role</string>
+    <string name="role_no_roles">No available roles</string>
+    <string name="role_manage">Manage roles…</string>
+    <string name="role_default_indicator">Default role</string>
+    <string name="role_show_menu">Show menu</string>
+    <string name="role_hide_menu">Hide menu</string>
+
+    <!-- RoleEditDialog -->
+    <string name="role_create_title">Create role</string>
+    <string name="role_edit_title">Edit role</string>
+    <string name="role_name_label">Role name</string>
+    <string name="role_name_validation">Enter role name</string>
+    <string name="role_desc_label">Description (optional)</string>
+    <string name="role_system_prompt_label">System prompt</string>
+    <string name="role_prompt_validation">Enter system prompt</string>
+    <string name="role_temperature_label">Temperature</string>
+    <string name="role_max_tokens_label">Max tokens</string>
+    <string name="role_make_default">Make default role</string>
+    <string name="role_preview_title">Prompt preview:</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_ai_providers">AI Providers</string>
+    <string name="settings_ai_providers_desc">API keys and AI model settings</string>
+    <string name="settings_ai_roles">AI Roles</string>
+    <string name="settings_ai_roles_desc">Manage roles and system prompts</string>
+    <string name="settings_web_search">Web Search</string>
+    <string name="settings_web_search_desc">Internet search settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_desc">Theme, colors, fonts</string>
+    <string name="settings_proactive">Proactive Mode</string>
+    <string name="settings_proactive_desc">Auto-suggestions: battery, calendar, notifications</string>
+    <string name="settings_memory_management">Memory Management</string>
+    <string name="settings_memory_management_desc">Facts and daily entries</string>
+    <string name="settings_scheduler_tasks">Scheduled Tasks</string>
+    <string name="settings_scheduler_tasks_desc">View and manage tasks</string>
+    <string name="settings_skill_store">Skill Store</string>
+    <string name="settings_skill_store_desc">Install external skills</string>
+    <string name="settings_voice">Voice Control</string>
+    <string name="settings_voice_desc">Wake word, voice input, TTS</string>
+    <string name="settings_log_terminal">Log Terminal</string>
+    <string name="settings_log_terminal_desc">View agent logs</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_desc">Developed by PygmalionAi</string>
+    <string name="settings_navigate">Navigate</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">About</string>
+    <string name="about_app_name">Pai Android</string>
+    <string name="about_app_description">Native Android app for local AI chat</string>
+    <string name="about_developer_section">Developer</string>
+    <string name="about_developer_name">Developed by PygmalionAi</string>
+    <string name="about_website_section">Official Website</string>
+    <string name="about_telegram_section">Telegram Channel</string>
+    <string name="about_vk_section">VK Community</string>
+    <string name="about_version_section">App Version</string>
+    <string name="about_version">Version 1.0.0</string>
+    <string name="about_copyright">© 2026 PygmalionAi. All rights reserved.</string>
+
+    <!-- ProviderSettingsScreen -->
+    <string name="provider_settings_title">AI Providers</string>
+    <string name="provider_settings_empty">No providers</string>
+    <string name="provider_add_settings">Add settings</string>
+    <string name="provider_no_settings">No settings</string>
+    <string name="provider_settings_count">Settings (%d):</string>
+    <string name="provider_model_unnamed">Model not specified</string>
+    <string name="provider_default">Default</string>
+    <string name="provider_status_enabled_default">Status: Enabled • Default</string>
+    <string name="provider_status_disabled_normal">Status: Disabled • Normal</string>
+    <string name="provider_add_title">Add provider</string>
+    <string name="provider_edit_title">Edit provider</string>
+    <string name="provider_api_key_label">API key</string>
+    <string name="provider_base_url_label">Base URL</string>
+    <string name="provider_model_label">Model</string>
+    <string name="provider_select_label">Provider:</string>
+    <string name="provider_model_params_title">Model Parameters</string>
+    <string name="provider_max_tokens_label">Response limit (tokens)</string>
+    <string name="provider_thinking_label">Thinking Mode</string>
+    <string name="provider_thinking_on">Thinking Mode (like deepseek-reasoner)</string>
+    <string name="provider_thinking_off">Non-Thinking Mode (like deepseek-chat)</string>
+    <string name="provider_context_mgmt_label">Context Management</string>
+    <string name="provider_context_truncate">Truncate</string>
+    <string name="provider_context_summarize">Summarize</string>
+    <string name="provider_context_window_label">Model context window</string>
+    <string name="provider_max_output_label">Model max output</string>
+    <string name="provider_context_buffer_label">Context buffer</string>
+    <string name="provider_gen_params_title">Generation Parameters</string>
+    <string name="provider_use_custom_params">Use custom parameters</string>
+    <string name="provider_custom_params_desc">Temperature and top_p from settings</string>
+    <string name="provider_default_params_desc">Default parameters (temperature=0.7)</string>
+    <string name="provider_temperature_label">Temperature</string>
+    <string name="provider_top_p_label">Top-P</string>
+    <string name="provider_use_as_default">Use as default provider</string>
+    <string name="provider_show_key">Show</string>
+    <string name="provider_hide_key">Hide</string>
+    <string name="provider_unset_default">Unset default</string>
+    <string name="provider_set_default">Set as default</string>
+    <string name="provider_edit">Edit</string>
+    <string name="provider_test">Test</string>
+    <string name="provider_requires_key_yes">Yes</string>
+    <string name="provider_requires_key_no">No</string>
+
+    <!-- WebSearchSettingsScreen -->
+    <string name="web_search_title">Web Search Settings</string>
+    <string name="web_search_external_apis">External Search APIs</string>
+    <string name="web_search_external_desc">Use Google or Tavily API for search. When disabled, the skill uses built-in DuckDuckGo (no keys required, always available).</string>
+    <string name="web_search_google_title">Google Custom Search</string>
+    <string name="web_search_tavily_title">Tavily Search API</string>
+    <string name="web_search_engine_id_label">Search Engine ID</string>
+    <string name="web_search_api_key_label">API key</string>
+    <string name="web_search_engine_id_placeholder">Enter search engine ID</string>
+    <string name="web_search_tavily_key_placeholder">Enter Tavily API key</string>
+    <string name="web_search_google_help">Get API keys from Google Cloud Console</string>
+    <string name="web_search_tavily_help">Get API key at tavily.com</string>
+    <string name="web_search_test_connection">Test connection</string>
+    <string name="web_search_unsaved_changes">To enable web search you need:\n1. Enable the module\n2. Enable web search usage\n3. Fill required fields for the selected provider</string>
+
+    <!-- AppearanceSettingsScreen -->
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_theme_section">Theme</string>
+    <string name="appearance_theme_light">Light</string>
+    <string name="appearance_theme_dark">Dark</string>
+    <string name="appearance_theme_system">System</string>
+    <string name="appearance_modern_colors">Modern colors</string>
+    <string name="appearance_standard_colors">Standard colors</string>
+    <string name="appearance_dynamic_colors">Dynamic colors</string>
+    <string name="appearance_theme_system_desc">Follows system settings</string>
+    <string name="appearance_theme_light_desc">Always light mode</string>
+    <string name="appearance_theme_dark_desc">Always dark mode</string>
+    <string name="appearance_colors_section">Colors</string>
+    <string name="appearance_dynamic_colors_desc">Use wallpaper colors (Android 12+)</string>
+    <string name="appearance_reset">Reset</string>
+    <string name="appearance_info_section">Theme Info</string>
+    <string name="appearance_current_theme">Current theme:</string>
+    <string name="appearance_modern_colors_status">Modern colors:</string>
+    <string name="appearance_dynamic_colors_status">Dynamic colors:</string>
+    <string name="appearance_enabled">Enabled</string>
+    <string name="appearance_disabled">Disabled</string>
+
+    <!-- VoiceSettingsScreen -->
+    <string name="voice_settings_title">Voice Control</string>
+    <string name="voice_assistant_title">Voice Assistant</string>
+    <string name="voice_status_active">Service active</string>
+    <string name="voice_status_starting">Starting…</string>
+    <string name="voice_status_disabled">Disabled</string>
+    <string name="voice_wake_word_section">Wake Word</string>
+    <string name="voice_wake_word_hint">Say this word to activate voice input</string>
+    <string name="voice_wake_word_label">Wake word</string>
+    <string name="voice_tts_section">Text-to-Speech (TTS)</string>
+    <string name="voice_tts_enabled">Responses will be read aloud</string>
+    <string name="voice_tts_disabled">Text only in chat, no voice</string>
+    <string name="voice_info_text">When enabled, the service constantly listens to the microphone in the background. When the wake word is detected, speech recognition starts, the result is sent to the agent, and the response is spoken aloud.\n\nThe Vosk model (~42 MB) is downloaded once on first launch.</string>
+
+    <!-- ProactiveSettingsScreen -->
+    <string name="proactive_title">Proactive Mode</string>
+    <string name="proactive_master_switch">Proactive Mode</string>
+    <string name="proactive_description">Agent will proactively suggest actions based on context</string>
+    <string name="proactive_categories_section">Suggestion Categories</string>
+    <string name="proactive_battery_title">🔋 Battery</string>
+    <string name="proactive_battery_desc">Warn about low battery</string>
+    <string name="proactive_calendar_title">📅 Calendar</string>
+    <string name="proactive_calendar_desc">Remind about upcoming events</string>
+    <string name="proactive_notifications_title">📬 Notifications</string>
+    <string name="proactive_notifications_desc">Digest when notifications accumulate</string>
+    <string name="proactive_forward_to_chat_title">📨 To Chat</string>
+    <string name="proactive_forward_to_chat_desc">Forward notifications from tray to chat</string>
+    <string name="proactive_geo_title">📍 Geo Hints</string>
+    <string name="proactive_geo_desc">Location-based suggestions</string>
+    <string name="proactive_quiet_hours_section">Quiet Hours</string>
+    <string name="proactive_quiet_hours_format">Do not disturb from %d:00 to %d:00</string>
+    <string name="proactive_quiet_start">Start</string>
+    <string name="proactive_quiet_end">End</string>
+    <string name="proactive_geo_loading">Loading geo-tasks…</string>
+    <string name="proactive_geo_empty">No active geo-tasks. Create via chat: "remind [what] when I\'m at [place]"</string>
+    <string name="proactive_geo_one_shot">one-time</string>
+    <string name="proactive_geo_multi">recurring</string>
+    <string name="proactive_geo_edit_title">Edit task</string>
+    <string name="proactive_geo_label">What to remind</string>
+    <string name="proactive_geo_address">Address</string>
+    <string name="proactive_geo_radius">Radius (m)</string>
+    <string name="proactive_geo_radius_format">%dm · %s</string>
+
+    <!-- SchedulerTasksScreen -->
+    <string name="scheduler_title">Scheduled Tasks</string>
+    <string name="scheduler_empty">No scheduled tasks</string>
+    <string name="scheduler_add_task">Add task</string>
+    <string name="scheduler_delete_title">Delete task</string>
+    <string name="scheduler_delete_message">Delete "%s"? This cannot be undone.</string>
+    <string name="scheduler_new_task">New task</string>
+    <string name="scheduler_edit_task">Edit task</string>
+    <string name="scheduler_name_label">Name</string>
+    <string name="scheduler_prompt_label">Task text / prompt</string>
+    <string name="scheduler_interval_label">Repeat every N minutes</string>
+    <string name="scheduler_interval_minutes_label">Interval in minutes</string>
+    <string name="scheduler_every_n_min">Every %d min</string>
+    <string name="scheduler_recurrence_label">Recurrence</string>
+    <string name="scheduler_daily">Daily</string>
+    <string name="scheduler_weekly">Weekly</string>
+    <string name="scheduler_monthly">Monthly</string>
+    <string name="scheduler_once">Once</string>
+    <string name="scheduler_at">At</string>
+    <string name="scheduler_on_label">On</string>
+    <string name="scheduler_day_of_month">Day of month (1-31)</string>
+    <string name="scheduler_date_format">Date (YYYY-MM-DD)</string>
+    <string name="scheduler_select_time">Select time</string>
+    <string name="scheduler_daily_at">Daily at %s</string>
+    <string name="scheduler_on_s">On %s</string>
+    <string name="scheduler_weekly_s_at">Weekly %s at %s</string>
+    <string name="scheduler_monthly_s_th">Monthly on the %s</string>
+
+    <!-- SkillStoreScreen -->
+    <string name="skill_store_title">Skill Store</string>
+    <string name="skill_store_available">Available Skills</string>
+    <string name="skill_store_builtin">Built-in Skills</string>
+    <string name="skill_store_installed_header">Installed Skills</string>
+    <string name="skill_store_no_available">No skills available</string>
+    <string name="skill_store_no_installed">No installed skills</string>
+    <string name="skill_store_installed">Installed</string>
+    <string name="skill_store_install">Install</string>
+    <string name="skill_store_builtin_tag">Built-in</string>
+    <string name="skill_store_delete_title">Delete skill?</string>
+    <string name="skill_store_delete_message">Delete "%s"? This cannot be undone.</string>
+    <string name="skill_store_configure">Settings</string>
+    <string name="skill_store_python_name">Python Runtime</string>
+    <string name="skill_store_python_desc">Execute Python scripts in-app (Chaquopy). Create and manage Python-based tools.</string>
+    <string name="skill_store_home_name">Home Network</string>
+    <string name="skill_store_home_desc">Smart home: Wi-Fi network scanning, device discovery and control.</string>
+    <string name="skill_store_email_name">Email Client</string>
+    <string name="skill_store_email_desc">Check, read and send emails via IMAP/SMTP.</string>
+    <string name="skill_store_email_accounts_title">Email Accounts</string>
+    <string name="skill_store_email_no_accounts">No accounts added.</string>
+    <string name="skill_store_email_add_account">Add account</string>
+    <string name="skill_store_email_done">Done</string>
+    <string name="skill_store_email_edit_title">Edit account</string>
+    <string name="skill_store_email_new_title">New account</string>
+    <string name="skill_store_email_name_label">Name</string>
+    <string name="skill_store_email_label">Email</string>
+    <string name="skill_store_email_app_password">App password</string>
+
+    <!-- LogTerminalScreen -->
+    <string name="log_terminal_title">Log Terminal</string>
+    <string name="log_terminal_clear">Clear</string>
+    <string name="log_terminal_export">Export</string>
+    <string name="log_terminal_export_title">Export logs</string>
+    <string name="log_terminal_autoscroll_on">Autoscroll: on</string>
+    <string name="log_terminal_autoscroll_off">Autoscroll: off</string>
+    <string name="log_terminal_search_hint">Search…</string>
+    <string name="log_terminal_filter_all">All</string>
+
+    <!-- CameraScreen -->
+    <string name="camera_title">Camera</string>
+    <string name="camera_switch">Switch camera</string>
+    <string name="camera_capture">Take photo</string>
+    <string name="camera_no_permission">Camera permission is required</string>
+    <string name="camera_request_permission">Request permission</string>
+    <string name="camera_initializing">Initializing camera…</string>
+    <string name="camera_snackbar_no_permission">Camera permission is required</string>
+
+    <!-- EmailSettingsScreen -->
+    <string name="email_settings_title">Email Settings</string>
+    <string name="email_settings_hint">Add an email account. Use an app password.</string>
+    <string name="email_settings_empty">No accounts added.\nPress the "+" button to add one.</string>
+    <string name="email_settings_add">Add account</string>
+    <string name="email_settings_edit">Edit</string>
+    <string name="email_settings_add_title">Add mailbox</string>
+    <string name="email_settings_edit_title">Edit mailbox</string>
+    <string name="email_settings_name_label">Display name (e.g. Personal)</string>
+    <string name="email_settings_email_label">Email</string>
+    <string name="email_settings_password_label">App password</string>
+    <string name="email_settings_password_hint">Use an app password, not your main password.</string>
+    <string name="email_settings_advanced">Advanced settings</string>
+    <string name="email_settings_hide_advanced">Hide advanced settings</string>
+    <string name="email_settings_imap_server">IMAP server</string>
+    <string name="email_settings_imap_port">IMAP port</string>
+    <string name="email_settings_smtp_server">SMTP server</string>
+    <string name="email_settings_smtp_port">SMTP port</string>
+
+    <!-- MemoryManagementScreen -->
+    <string name="memory_title">Memory Management</string>
+    <string name="memory_search_hint">Search…</string>
+    <string name="memory_clear_search">Clear search</string>
+    <string name="memory_tab_facts">Facts</string>
+    <string name="memory_tab_daily">Daily Entries</string>
+    <string name="memory_facts_empty">No facts found</string>
+    <string name="memory_daily_empty">No daily entries found</string>
+    <string name="memory_select">Select</string>
+    <string name="memory_more">More</string>
+    <string name="memory_refresh">Refresh</string>
+    <string name="memory_export">Export memory</string>
+    <string name="memory_import">Import memory</string>
+    <string name="memory_selected_count">Selected: %d</string>
+    <string name="memory_cancel_selection">Cancel selection</string>
+    <string name="memory_select_all">Select all</string>
+    <string name="memory_delete_selected">Delete selected</string>
+    <string name="memory_delete_fact_title">Delete fact?</string>
+    <string name="memory_delete_fact_message">Are you sure you want to delete the fact "%s"?</string>
+    <string name="memory_bulk_delete_title">Delete selected facts?</string>
+    <string name="memory_bulk_delete_message">Are you sure you want to delete %d facts?</string>
+    <string name="memory_scope_all">All</string>
+    <string name="memory_scope_user">👤 User</string>
+    <string name="memory_scope_ai">🤖 AI</string>
+    <string name="memory_scope_global">🌍 Global</string>
+    <string name="memory_export_title">Export Memory</string>
+    <string name="memory_export_desc">Copy the Markdown text below or save it to a file for backup.</string>
+    <string name="memory_export_markdown_label">Markdown</string>
+    <string name="memory_export_copied">Copied to clipboard</string>
+    <string name="memory_export_copy">Copy</string>
+    <string name="memory_import_title">Import Memory</string>
+    <string name="memory_import_desc">Paste Markdown text from Pai_Android or OpenClaw export.</string>
+    <string name="memory_import_text_label">Markdown text</string>
+    <string name="memory_import_placeholder">Paste Markdown text here…</string>
+    <string name="memory_import_button">Import</string>
+    <string name="memory_import_success">Import successful</string>
+    <string name="memory_import_errors">Import errors</string>
+    <string name="memory_import_stats">Facts: %d, Entries: %d</string>
+    <string name="memory_import_errors_label">Errors:</string>
+
+    <!-- FactEditDialog -->
+    <string name="fact_edit_title">Edit fact</string>
+    <string name="fact_edit_category">Category: %s</string>
+    <string name="fact_edit_scope">Scope: %s</string>
+    <string name="fact_edit_key_label">Key</string>
+    <string name="fact_edit_value_label">Value</string>
+    <string name="fact_edit_confidence_label">Confidence: %d%%</string>
+    <string name="fact_edit_confidence_min">0%</string>
+    <string name="fact_edit_confidence_max">100%</string>
+
+    <!-- FactConfirmationDialog -->
+    <string name="fact_confirm_title">Confirm fact</string>
+    <string name="fact_confirm_category_label">Category:</string>
+    <string name="fact_confirm_key_label">Key:</string>
+    <string name="fact_confirm_context_label">Context:</string>
+    <string name="fact_confirm_confidence_label">AI Confidence:</string>
+    <string name="fact_confirm_user_scope">👤 User</string>
+    <string name="fact_confirm_ai_scope">🤖 AI assistant</string>
+    <string name="fact_confirm_global_scope">🌍 General info</string>
+    <string name="fact_confirm_high_confidence">High confidence</string>
+    <string name="fact_confirm_medium_confidence">Medium confidence</string>
+    <string name="fact_confirm_low_confidence">Low confidence</string>
+    <string name="fact_confirm_corrected_label">Corrected value</string>
+    <string name="fact_confirm_corrected_placeholder">Enter the correct value</string>
+    <string name="fact_confirm_extracted_label">Extracted value:</string>
+    <string name="fact_confirm_tags_label">Tags:</string>
+    <string name="fact_confirm_confirm_button">Confirm</string>
+    <string name="fact_confirm_save_correction">Save correction</string>
+    <string name="fact_confirm_correct_button">Correct</string>
+    <string name="fact_confirm_reject_button">Reject</string>
+
+    <!-- RouterSettingsScreen -->
+    <string name="router_settings_title">Network Settings</string>
+
+    <!-- Missing ProviderSettings labels -->
+    <string name="provider_default_model_label">Default model</string>
+    <string name="provider_requires_key_label">Requires API key</string>
+    <string name="provider_url_label">URL</string>
+    <string name="provider_default_url_label">Default URL</string>
+
+    <!-- Missing RoleListScreen titles -->
+    <string name="roles_title">AI Roles</string>
+    <string name="roles_empty">No roles created</string>
+    <string name="roles_empty_hint">Press + to create your first role</string>
+    <string name="role_default">Default role</string>
+    <string name="add">Add</string>
+    <string name="edit">Edit</string>
+    <string name="roles_delete_message">The role will be deleted permanently. Existing chats will not be affected, but they will lose their association with this role.</string>
+
+    <!-- Missing RoleListScreen labels -->
+    <string name="role_save">Save</string>
+    <string name="role_cancel">Cancel</string>
+    <string name="role_title_placeholder">Role name</string>
+    <string name="role_system_prompt">System prompt</string>
+    <string name="role_context">Context</string>
+    <string name="role_temperature">Temperature</string>
+    <string name="role_max_tokens">Max tokens</string>
+
+    <!-- Missing WebSearchScreen labels -->
+    <string name="web_search_use_external">Use external API</string>
+    <string name="web_search_provider">Search provider</string>
+    <string name="web_search_test_success">Connection successful</string>
+    <string name="web_search_test_fail">Connection failed</string>
+    <string name="web_search_google_fields_hint">%1$s and %2$s</string>
+
+    <!-- Missing AppearanceScreen labels -->
+    <string name="appearance_reset_defaults">Reset to defaults</string>
+
+    <!-- Missing ProactiveScreen labels -->
+    <string name="proactive_min_priority">Priority threshold</string>
+    <string name="proactive_min_priority_desc">Minimum notification priority: %d</string>
+    <string name="proactive_bottom_hint">Proactive mode can be disabled anytime in settings.</string>
+
+    <!-- Missing Memory labels -->
+    <string name="memory_confidence_high">High confidence</string>
+    <string name="memory_confidence_medium">Medium confidence</string>
+    <string name="memory_confidence_low">Low confidence</string>
+
+    <!-- Hints -->
+    <string name="hint_icon_label">Hint</string>
+    <string name="hint_dialog_title">Hint</string>
+
+    <!-- Language -->
+    <string name="settings_language">App Language</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_english">English</string>
+
+    <!-- Missing TODOs -->
+    <string name="camera_front">Front</string>
+    <string name="camera_back">Back</string>
+    <string name="camera_captured_count">Captured: %d</string>
+    <string name="chat_detail_retry">Retry</string>
+    <string name="chat_detail_error_save">Save error: %s</string>
+    <string name="chat_detail_error_copy">Copy error: %s</string>
+    <string name="chat_detail_error_delete">Delete error: %s</string>
+    <string name="chat_detail_error_voice">Voice input error: %s</string>
+    <string name="chat_detail_toolbar_expand">Show toolbar</string>
+    <string name="chat_detail_toolbar_collapse">Hide toolbar</string>
+    <string name="chat_detail_search_clear">Clear search</string>
+    <string name="chat_detail_code_copied">Code copied</string>
+    <string name="chat_detail_text_copied">Text copied</string>
+    <string name="log_terminal_export_error">Export error</string>
+    <string name="log_terminal_search_clear">Clear</string>
+    <string name="scheduler_edit">Edit</string>
+    <string name="scheduler_unnamed">Unnamed</string>
+    <string name="scheduler_n_times">(%d times)</string>
+    <string name="memory_bulk_delete">Delete selected (%d)</string>
+    <string name="voice_error">Error</string>
+    <string name="log_filter_all">All</string>
+
+    <!-- Navigation -->
+    <string name="nav_chat_list">Chats</string>
+    <string name="nav_settings">Settings</string>
+</resources>

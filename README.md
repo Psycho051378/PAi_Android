@@ -1,0 +1,187 @@
+# PAi Android — AI Agent for Android
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0+-purple.svg)](https://kotlinlang.org)
+[![Platform](https://img.shields.io/badge/Android-14%2B-green.svg)](https://developer.android.com)
+
+**PAi Android** is a full-featured AI agent running natively on Android. Unlike cloud chatbots or simplified wrappers, PAi is a complete autonomous agent with its own decision engine, tool system, skill store, memory, scheduler, and proactive capabilities.
+
+> ⚠️ **Status:** Active development. Core features are stable, UI is being polished. Contributions welcome!
+
+---
+
+## ✨ Features
+
+### 🧠 Agent Core
+- **ReAct decision loop** — Gather context → Execute tools → Respond, all driven by LLM
+- **Multi-provider AI** — DeepSeek, OpenAI, OpenRouter, Ollama, Custom endpoints
+- **Deterministic router** — Fast command routing without LLM for common intents
+- **Task queue** — Sequential async execution with auto-approval for long tasks
+- **Code generation** — Generate and execute Kotlin code from plain text queries
+
+### 📡 Communication & Skills
+- **Email** — Read, search, send, forward via IMAP/SMTP
+- **SMS** — Send and read messages with auto-permission handling
+- **Phone calls** — Initiate calls with runtime permission prompts
+- **Contacts** — Search and manage contacts
+- **Python skills** — Create, edit, and run Python scripts via LLM generation
+- **News Digest** — RSS aggregation from major feeds
+- **YouTube Watcher** — Video transcript analysis
+- **Web search** — Google Custom Search, Tavily, built-in DuckDuckGo
+- **Skill Store** — External skill marketplace with auto-install
+
+### 📍 Location & Weather
+- **GPS location** — Active and passive location via Google Play Services + fallback
+- **IP geolocation** — No-permission fallback via ip-api.com
+- **Reverse geocoding** — Coordinates → Address with caching
+- **Weather** — Get weather by current location or city name
+
+### 📅 Scheduler & Proactivity
+- **Task scheduler** — Cron-like scheduled tasks with coroutine execution
+- **Background service** — ForegroundService for Android 14+ (no background limits)
+- **Proactive mode** — Battery monitoring, calendar reminders, smart notification analysis
+- **Notification listener** — Real-time notification processing with importance scoring
+- **Context engine** — Circular buffer of recent events fed to AI for contextual awareness
+
+### 💾 Memory System
+- **Long-term memory** — Persistent storage of facts with confidence scoring
+- **Daily memory** — Automatic daily notes and summaries
+- **Memory management UI** — Browse, edit, search, export, and import memory
+- **Fact extraction** — Automatic extraction of personal info, preferences, events from chat
+
+### 🛠 Extras
+- **Voice control** — Vosk offline speech recognition + TTS
+- **Appearance customization** — Material You dynamic colors, light/dark/system themes
+- **Multi-language UI** — Russian and English interface with instant switching
+- **Built-in hint system** — Contextual tooltips explaining settings and features
+
+---
+
+## 🖼 Screenshots
+
+_Coming soon — the app is in active development. Screenshots will be added with the first stable release._
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Android Studio Hedgehog (2023.1.1+) or later
+- JDK 17+
+- Android SDK 34+
+- A physical device or emulator running Android 14+
+
+### Build & Install
+
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/pai-android.git
+cd pai-android
+
+# Build debug APK
+./gradlew assembleDebug
+
+# Or build and install directly
+./gradlew installDebug
+```
+
+### First Run
+1. Open the app — you'll see an empty chat screen
+2. Go to **Settings → AI Providers** to configure your API key
+3. Start chatting! The AI agent will use your configured provider
+
+---
+
+## 🔧 Configuration
+
+### AI Providers
+The app supports multiple AI backends. API keys are stored locally and never sent anywhere:
+
+| Provider | Default Model | API Key Required | URL |
+|----------|--------------|-----------------|-----|
+| DeepSeek | `deepseek-v4-flash` | ✅ | [platform.deepseek.com](https://platform.deepseek.com) |
+| OpenAI | `gpt-3.5-turbo` | ✅ | [platform.openai.com](https://platform.openai.com) |
+| OpenRouter | `openrouter/free` | ✅ | [openrouter.ai](https://openrouter.ai) |
+| Ollama | `llama2` | ❌ | Runs locally on device/network |
+
+### Skills
+External skills can be installed from the built-in Skill Store. Skills are fetched from a remote manifest and executed on-device.
+
+---
+
+## 🏗 Architecture
+
+```
+com.pai.android/
+├── agent/
+│   ├── DecisionEngine.kt      # Main decision loop (ReAct)
+│   ├── TaskScheduler.kt       # Cron-like task scheduling
+│   ├── tools/                  # Tool implementations (fetch, codegen, location...)
+│   ├── skills/                 # Built-in skills (email, sms, call, weather...)
+│   └── SkillRegistry.kt       # Central skill management
+├── data/
+│   ├── local/                  # Room database, DAOs
+│   ├── model/                  # Data models
+│   ├── repository/             # Data repositories
+│   └── detector/               # Intent/fact detection
+├── presentation/               # ViewModels
+├── ui/
+│   ├── screens/                # Compose screens
+│   ├── components/             # Reusable UI components
+│   └── navigation/             # Navigation graph
+├── di/                         # Hilt dependency injection
+└── service/                    # Background services
+```
+
+---
+
+## 🧪 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Language | Kotlin 2.0+ |
+| UI | Jetpack Compose, Material3 |
+| DI | Hilt |
+| Database | Room |
+| Architecture | MVVM + Unidirectional data flow |
+| AI | OpenAI-compatible API (DeepSeek, OpenAI, OpenRouter) |
+| Speech | Vosk (offline recognition) |
+| Background | ForegroundService |
+
+---
+
+## 📄 License
+
+```
+Copyright 2026 PAi Android
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! This is a personal project in active development.
+
+- **Bug reports / feature requests** — Open an issue
+- **Pull requests** — Please ensure brace balance and existing tests pass
+- **Questions** — Reach out via the project's GitHub Discussions
+
+---
+
+## 🙏 Acknowledgements
+
+- [DeepSeek](https://deepseek.com) for their excellent API
+- [Vosk](https://alphacephei.com/vosk/) for offline speech recognition
+- All open-source libraries used in this project

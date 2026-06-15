@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">PAi Android</string>
+    <string name="loading">Загрузка…</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="delete">Удалить</string>
+    <string name="close">Закрыть</string>
+    <string name="back">Назад</string>
+    <string name="ok">OK</string>
+
+    <!-- LoginScreen / Auth -->
+    <string name="login_title">Вход</string>
+    <string name="login_username">Имя пользователя</string>
+    <string name="login_password">Пароль</string>
+    <string name="login_button">Войти</string>
+    <string name="login_register">Регистрация</string>
+
+    <!-- ChatListScreen -->
+    <string name="chat_list_title">Чаты</string>
+    <string name="chat_list_new">Новый чат</string>
+    <string name="chat_list_delete_title">Удалить чат?</string>
+    <string name="chat_list_delete_message">Чат «%s» и все его сообщения будут безвозвратно удалены.</string>
+    <string name="chat_list_empty">Здесь пока нет сообщений. Напишите что-нибудь, чтобы начать разговор.</string>
+    <string name="chat_list_unnamed">Без названия</string>
+    <string name="chat_list_today">Сегодня</string>
+    <string name="chat_list_yesterday">Вчера</string>
+    <string name="chat_list_this_week">На этой неделе</string>
+    <string name="chat_list_this_month">В этом месяце</string>
+    <string name="chat_list_earlier">Ранее</string>
+    <string name="chat_list_archive">Архив</string>
+    <string name="chat_list_collapse">Свернуть</string>
+    <string name="chat_list_expand">Развернуть</string>
+    <string name="chat_item_messages">Сообщений: %d • %s</string>
+    <string name="chat_item_active">Активный</string>
+    <string name="chat_item_archived">В архиве</string>
+    <string name="chat_item_updated">Обновлён: %s</string>
+    <string name="chat_item_archive">Архивировать</string>
+    <string name="chat_item_unarchive">Разархивировать</string>
+
+    <!-- ChatDetailScreen -->
+    <string name="chat_detail_unnamed">Без названия</string>
+    <string name="chat_detail_empty">Сообщений пока нет\nНачните диалог</string>
+    <string name="chat_detail_input_hint">Введите сообщение…</string>
+    <string name="chat_detail_send">Отправить</string>
+    <string name="chat_detail_you">Вы</string>
+    <string name="chat_detail_assistant">Ассистент</string>
+    <string name="chat_detail_copy">Копировать</string>
+    <string name="chat_detail_copy_code">Копировать код</string>
+    <string name="chat_detail_resend">Отправить снова</string>
+    <string name="chat_detail_regenerate">Сгенерировать заново</string>
+    <string name="chat_detail_save_to_file">Сохранить в файл</string>
+    <string name="chat_detail_save_code">Сохранить код в файл</string>
+    <string name="chat_detail_save_response">Сохранить ответ</string>
+    <string name="chat_detail_stop_recording">Остановить запись</string>
+    <string name="chat_detail_voice_input">Голосовой ввод</string>
+    <string name="chat_detail_camera">Камера</string>
+    <string name="chat_detail_attach_file">Прикрепить файл</string>
+    <string name="chat_detail_remove_attachment">Удалить вложение</string>
+    <string name="chat_detail_open">Открыть</string>
+    <string name="chat_detail_unnamed_file">Без имени</string>
+    <string name="chat_detail_file_not_found">Файл не найден: %s</string>
+    <string name="chat_detail_cant_open_file">Не удалось открыть файл: %s</string>
+    <string name="chat_detail_file_error">Ошибка обработки файла: %s</string>
+
+    <!-- RoleDropdownMenu -->
+    <string name="role_select_prompt">Выберите роль</string>
+    <string name="role_no_roles">Нет доступных ролей</string>
+    <string name="role_manage">Управление ролями…</string>
+    <string name="role_default_indicator">Роль по умолчанию</string>
+    <string name="role_show_menu">Показать меню</string>
+    <string name="role_hide_menu">Скрыть меню</string>
+
+    <!-- RoleEditDialog -->
+    <string name="role_create_title">Создать роль</string>
+    <string name="role_edit_title">Редактировать роль</string>
+    <string name="role_name_label">Название роли</string>
+    <string name="role_name_validation">Введите название роли</string>
+    <string name="role_desc_label">Описание (необязательно)</string>
+    <string name="role_system_prompt_label">Системный промпт</string>
+    <string name="role_prompt_validation">Введите системный промпт</string>
+    <string name="role_temperature_label">Температура</string>
+    <string name="role_max_tokens_label">Макс. токенов</string>
+    <string name="role_make_default">Сделать ролью по умолчанию</string>
+    <string name="role_preview_title">Предпросмотр промпта:</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_ai_providers">AI провайдеры</string>
+    <string name="settings_ai_providers_desc">Настройки API ключей и моделей AI</string>
+    <string name="settings_ai_roles">Роли AI</string>
+    <string name="settings_ai_roles_desc">Управление ролями и системными промптами</string>
+    <string name="settings_web_search">Веб-поиск</string>
+    <string name="settings_web_search_desc">Настройки поиска в интернете</string>
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_appearance_desc">Тема, цвета, шрифты</string>
+    <string name="settings_proactive">Проактивный режим</string>
+    <string name="settings_proactive_desc">Автоматические подсказки: батарея, календарь, уведомления</string>
+    <string name="settings_memory_management">Управление памятью</string>
+    <string name="settings_memory_management_desc">Факты и дневные записи</string>
+    <string name="settings_scheduler_tasks">Запланированные задачи</string>
+    <string name="settings_scheduler_tasks_desc">Просмотр и управление задачами</string>
+    <string name="settings_skill_store">Магазин навыков</string>
+    <string name="settings_skill_store_desc">Установка внешних навыков</string>
+    <string name="settings_voice">Голосовое управление</string>
+    <string name="settings_voice_desc">Wake word, голосовой ввод, TTS</string>
+    <string name="settings_log_terminal">Log Terminal</string>
+    <string name="settings_log_terminal_desc">Просмотр логов агента</string>
+    <string name="settings_about">О приложении</string>
+    <string name="settings_about_desc">Разработано PygmalionAi Разумные боты</string>
+    <string name="settings_navigate">Перейти</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">О приложении</string>
+    <string name="about_app_name">Pai Android</string>
+    <string name="about_app_description">Нативное Android приложение для локального AI чата</string>
+    <string name="about_developer_section">Разработчик</string>
+    <string name="about_developer_name">Разработано PygmalionAi Разумные боты</string>
+    <string name="about_website_section">Официальный сайт</string>
+    <string name="about_telegram_section">Телеграм канал</string>
+    <string name="about_vk_section">Сообщество ВКонтакте</string>
+    <string name="about_version_section">Версия приложения</string>
+    <string name="about_version">Версия 1.0.0</string>
+    <string name="about_copyright">© 2026 PygmalionAi. Все права защищены.</string>
+
+    <!-- ProviderSettingsScreen -->
+    <string name="provider_settings_title">AI Провайдеры</string>
+    <string name="provider_settings_empty">Нет провайдеров</string>
+    <string name="provider_add_settings">Добавить настройки</string>
+    <string name="provider_no_settings">Настроек нет</string>
+    <string name="provider_settings_count">Настройки (%d):</string>
+    <string name="provider_model_unnamed">Не указана модель</string>
+    <string name="provider_default">По умолчанию</string>
+    <string name="provider_status_enabled_default">Статус: Включён • По умолчанию</string>
+    <string name="provider_status_disabled_normal">Статус: Выключен • Обычный</string>
+    <string name="provider_add_title">Добавить провайдер</string>
+    <string name="provider_edit_title">Редактировать провайдер</string>
+    <string name="provider_api_key_label">API ключ</string>
+    <string name="provider_base_url_label">Base URL</string>
+    <string name="provider_model_label">Модель</string>
+    <string name="provider_select_label">Провайдер:</string>
+    <string name="provider_model_params_title">Параметры модели</string>
+    <string name="provider_max_tokens_label">Лимит ответа (токенов)</string>
+    <string name="provider_thinking_label">Режим мышления (Thinking)</string>
+    <string name="provider_thinking_on">Thinking Mode (аналог deepseek-reasoner)</string>
+    <string name="provider_thinking_off">Non-Thinking Mode (аналог deepseek-chat)</string>
+    <string name="provider_context_mgmt_label">Управление контекстом</string>
+    <string name="provider_context_truncate">Обрезать</string>
+    <string name="provider_context_summarize">Суммаризировать</string>
+    <string name="provider_context_window_label">Контекстное окно модели</string>
+    <string name="provider_max_output_label">Макс. вывод модели</string>
+    <string name="provider_context_buffer_label">Буфер контекста</string>
+    <string name="provider_gen_params_title">Параметры генерации</string>
+    <string name="provider_use_custom_params">Использовать свои параметры</string>
+    <string name="provider_custom_params_desc">Temperature и top_p из настроек</string>
+    <string name="provider_default_params_desc">Дефолтные параметры (temperature=0.7)</string>
+    <string name="provider_temperature_label">Temperature</string>
+    <string name="provider_top_p_label">Top-P</string>
+    <string name="provider_use_as_default">Использовать как провайдер по умолчанию</string>
+    <string name="provider_show_key">Показать</string>
+    <string name="provider_hide_key">Скрыть</string>
+    <string name="provider_unset_default">Убрать по умолчанию</string>
+    <string name="provider_set_default">Сделать по умолчанию</string>
+    <string name="provider_edit">Редактировать</string>
+    <string name="provider_test">Тестировать</string>
+    <string name="provider_requires_key_yes">Да</string>
+    <string name="provider_requires_key_no">Нет</string>
+
+    <!-- WebSearchSettingsScreen -->
+    <string name="web_search_title">Настройки веб-поиска</string>
+    <string name="web_search_external_apis">Внешние поисковые API</string>
+    <string name="web_search_external_desc">Использовать Google или Tavily API для поиска. Если выключено — навык использует встроенный DuckDuckGo (без ключей, всегда доступен).</string>
+    <string name="web_search_google_title">Google Custom Search</string>
+    <string name="web_search_tavily_title">Tavily Search API</string>
+    <string name="web_search_engine_id_label">Search Engine ID</string>
+    <string name="web_search_api_key_label">API ключ</string>
+    <string name="web_search_engine_id_placeholder">Введите ID поисковой системы</string>
+    <string name="web_search_tavily_key_placeholder">Введите API ключ Tavily</string>
+    <string name="web_search_google_help">Получить ключи можно в Google Cloud Console</string>
+    <string name="web_search_tavily_help">Получить ключ можно на сайте tavily.com</string>
+    <string name="web_search_test_connection">Тестировать соединение</string>
+    <string name="web_search_unsaved_changes">Для включения веб-поиска необходимо:\n1. Включить модуль\n2. Включить использование веб-поиска\n3. Заполнить обязательные поля для выбранного провайдера</string>
+
+    <!-- AppearanceSettingsScreen -->
+    <string name="appearance_title">Внешний вид</string>
+    <string name="appearance_theme_section">Тема оформления</string>
+    <string name="appearance_theme_light">Светлая</string>
+    <string name="appearance_theme_dark">Тёмная</string>
+    <string name="appearance_theme_system">Системная</string>
+    <string name="appearance_modern_colors">Современные цвета</string>
+    <string name="appearance_standard_colors">Стандартные цвета</string>
+    <string name="appearance_dynamic_colors">Динамические цвета</string>
+    <string name="appearance_theme_system_desc">Следует системным настройкам</string>
+    <string name="appearance_theme_light_desc">Всегда светлый режим</string>
+    <string name="appearance_theme_dark_desc">Всегда тёмный режим</string>
+    <string name="appearance_colors_section">Цвета</string>
+    <string name="appearance_dynamic_colors_desc">Использовать цвета обоев (Android 12+)</string>
+    <string name="appearance_reset">Сбросить</string>
+    <string name="appearance_info_section">Информация о теме</string>
+    <string name="appearance_current_theme">Текущая тема:</string>
+    <string name="appearance_modern_colors_status">Современные цвета:</string>
+    <string name="appearance_dynamic_colors_status">Динамические цвета:</string>
+    <string name="appearance_enabled">Включены</string>
+    <string name="appearance_disabled">Отключены</string>
+
+    <!-- VoiceSettingsScreen -->
+    <string name="voice_settings_title">Голосовое управление</string>
+    <string name="voice_assistant_title">Голосовой ассистент</string>
+    <string name="voice_status_active">Сервис активен</string>
+    <string name="voice_status_starting">Запуск…</string>
+    <string name="voice_status_disabled">Выключен</string>
+    <string name="voice_wake_word_section">Ключевое слово (wake word)</string>
+    <string name="voice_wake_word_hint">Скажите это слово, чтобы активировать голосовой ввод</string>
+    <string name="voice_wake_word_label">Ключевое слово</string>
+    <string name="voice_tts_section">Озвучивание ответов (TTS)</string>
+    <string name="voice_tts_enabled">Ответы будут озвучиваться голосом</string>
+    <string name="voice_tts_disabled">Только текст в чат, без озвучки</string>
+    <string name="voice_info_text">При включении сервис постоянно слушает микрофон в фоне. При обнаружении ключевого слова запускается распознавание речи, результат отправляется агенту, ответ озвучивается.\n\nМодель Vosk (~42 МБ) скачивается один раз при первом запуске.</string>
+
+    <!-- ProactiveSettingsScreen -->
+    <string name="proactive_title">Проактивный режим</string>
+    <string name="proactive_master_switch">Проактивный режим</string>
+    <string name="proactive_description">Агент будет сам предлагать действия на основе контекста</string>
+    <string name="proactive_categories_section">Категории подсказок</string>
+    <string name="proactive_battery_title">🔋 Батарея</string>
+    <string name="proactive_battery_desc">Предупреждать о низком заряде</string>
+    <string name="proactive_calendar_title">📅 Календарь</string>
+    <string name="proactive_calendar_desc">Напоминать о скорых событиях</string>
+    <string name="proactive_notifications_title">📬 Уведомления</string>
+    <string name="proactive_notifications_desc">Сводка при скоплении уведомлений</string>
+    <string name="proactive_forward_to_chat_title">📨 В чат</string>
+    <string name="proactive_forward_to_chat_desc">Дублировать уведомления из шторки в чат</string>
+    <string name="proactive_geo_title">📍 Гео-подсказки</string>
+    <string name="proactive_geo_desc">Подсказки на основе местоположения</string>
+    <string name="proactive_quiet_hours_section">Тихий режим</string>
+    <string name="proactive_quiet_hours_format">Не беспокоить с %d:00 до %d:00</string>
+    <string name="proactive_quiet_start">Начало</string>
+    <string name="proactive_quiet_end">Конец</string>
+    <string name="proactive_geo_loading">Загрузка гео-задач…</string>
+    <string name="proactive_geo_empty">Нет активных гео-задач. Создайте через чат: «напомни [что] когда буду у [место]»</string>
+    <string name="proactive_geo_one_shot">однократно</string>
+    <string name="proactive_geo_multi">многократно</string>
+    <string name="proactive_geo_edit_title">Редактировать задачу</string>
+    <string name="proactive_geo_label">Что напомнить</string>
+    <string name="proactive_geo_address">Адрес</string>
+    <string name="proactive_geo_radius">Радиус (м)</string>
+    <string name="proactive_geo_radius_format">%dм · %s</string>
+
+    <!-- SchedulerTasksScreen -->
+    <string name="scheduler_title">Запланированные задачи</string>
+    <string name="scheduler_empty">Нет запланированных задач</string>
+    <string name="scheduler_add_task">Добавить задачу</string>
+    <string name="scheduler_delete_title">Удалить задачу</string>
+    <string name="scheduler_delete_message">Удалить «%s»? Это действие нельзя отменить.</string>
+    <string name="scheduler_new_task">Новая задача</string>
+    <string name="scheduler_edit_task">Редактировать задачу</string>
+    <string name="scheduler_name_label">Название</string>
+    <string name="scheduler_prompt_label">Текст задачи / промпт</string>
+    <string name="scheduler_interval_label">Повторять каждые N минут</string>
+    <string name="scheduler_interval_minutes_label">Интервал в минутах</string>
+    <string name="scheduler_every_n_min">Каждые %d мин</string>
+    <string name="scheduler_recurrence_label">Повторение</string>
+    <string name="scheduler_daily">Ежедневно</string>
+    <string name="scheduler_weekly">Еженедельно</string>
+    <string name="scheduler_monthly">Ежемесячно</string>
+    <string name="scheduler_once">Однократно</string>
+    <string name="scheduler_at">В</string>
+    <string name="scheduler_on_label">В день</string>
+    <string name="scheduler_day_of_month">День месяца (1-31)</string>
+    <string name="scheduler_date_format">Дата (ГГГГ-ММ-ДД)</string>
+    <string name="scheduler_select_time">Выбрать время</string>
+    <string name="scheduler_daily_at">Ежедневно в %s</string>
+    <string name="scheduler_on_s">В %s</string>
+    <string name="scheduler_weekly_s_at">Еженедельно %s в %s</string>
+    <string name="scheduler_monthly_s_th">Ежемесячно %s-го числа</string>
+
+    <!-- SkillStoreScreen -->
+    <string name="skill_store_title">Магазин навыков</string>
+    <string name="skill_store_available">Доступные навыки</string>
+    <string name="skill_store_builtin">Встроенные навыки</string>
+    <string name="skill_store_installed_header">Установленные навыки</string>
+    <string name="skill_store_no_available">Нет доступных навыков</string>
+    <string name="skill_store_no_installed">Нет установленных навыков</string>
+    <string name="skill_store_installed">Установлено</string>
+    <string name="skill_store_install">Установить</string>
+    <string name="skill_store_builtin_tag">Встроенный</string>
+    <string name="skill_store_delete_title">Удалить навык?</string>
+    <string name="skill_store_delete_message">Удалить «%s»? Это действие нельзя отменить.</string>
+    <string name="skill_store_configure">Настройки</string>
+    <string name="skill_store_python_name">Python Runtime</string>
+    <string name="skill_store_python_desc">Выполнение Python скриптов в приложении (Chaquopy). Создавайте и управляйте инструментами на Python.</string>
+    <string name="skill_store_home_name">Home Network</string>
+    <string name="skill_store_home_desc">Умный дом: сканирование Wi-Fi сети, поиск устройств и управление.</string>
+    <string name="skill_store_email_name">Email Client</string>
+    <string name="skill_store_email_desc">Проверка, чтение и отправка писем через IMAP/SMTP.</string>
+    <string name="skill_store_email_accounts_title">Email аккаунты</string>
+    <string name="skill_store_email_no_accounts">Нет добавленных аккаунтов.</string>
+    <string name="skill_store_email_add_account">Добавить аккаунт</string>
+    <string name="skill_store_email_done">Готово</string>
+    <string name="skill_store_email_edit_title">Редактировать аккаунт</string>
+    <string name="skill_store_email_new_title">Новый аккаунт</string>
+    <string name="skill_store_email_name_label">Название</string>
+    <string name="skill_store_email_label">Email</string>
+    <string name="skill_store_email_app_password">Пароль приложения</string>
+
+    <!-- LogTerminalScreen -->
+    <string name="log_terminal_title">Log Terminal</string>
+    <string name="log_terminal_clear">Очистить</string>
+    <string name="log_terminal_export">Экспорт</string>
+    <string name="log_terminal_export_title">Экспорт логов</string>
+    <string name="log_terminal_autoscroll_on">Автоскролл: вкл</string>
+    <string name="log_terminal_autoscroll_off">Автоскролл: выкл</string>
+    <string name="log_terminal_search_hint">Поиск…</string>
+    <string name="log_terminal_filter_all">Все</string>
+
+    <!-- CameraScreen -->
+    <string name="camera_title">Камера</string>
+    <string name="camera_switch">Переключить камеру</string>
+    <string name="camera_capture">Сделать снимок</string>
+    <string name="camera_no_permission">Требуется разрешение на использование камеры</string>
+    <string name="camera_request_permission">Запросить разрешение</string>
+    <string name="camera_initializing">Инициализация камеры…</string>
+    <string name="camera_snackbar_no_permission">Требуется разрешение на использование камеры</string>
+
+    <!-- EmailSettingsScreen -->
+    <string name="email_settings_title">Настройки почты</string>
+    <string name="email_settings_hint">Добавьте email-аккаунт. Используйте пароль приложения.</string>
+    <string name="email_settings_empty">Аккаунты не добавлены.\nНажмите кнопку «+» чтобы добавить.</string>
+    <string name="email_settings_add">Добавить аккаунт</string>
+    <string name="email_settings_edit">Редактировать</string>
+    <string name="email_settings_add_title">Добавить почтовый ящик</string>
+    <string name="email_settings_edit_title">Редактировать почтовый ящик</string>
+    <string name="email_settings_name_label">Название (например: Личная)</string>
+    <string name="email_settings_email_label">Email</string>
+    <string name="email_settings_password_label">Пароль приложения</string>
+    <string name="email_settings_password_hint">Используйте пароль приложения, не основной пароль.</string>
+    <string name="email_settings_advanced">Расширенные настройки</string>
+    <string name="email_settings_hide_advanced">Скрыть расширенные настройки</string>
+    <string name="email_settings_imap_server">IMAP сервер</string>
+    <string name="email_settings_imap_port">IMAP порт</string>
+    <string name="email_settings_smtp_server">SMTP сервер</string>
+    <string name="email_settings_smtp_port">SMTP порт</string>
+
+    <!-- MemoryManagementScreen -->
+    <string name="memory_title">Управление памятью</string>
+    <string name="memory_search_hint">Поиск…</string>
+    <string name="memory_clear_search">Очистить поиск</string>
+    <string name="memory_tab_facts">Факты</string>
+    <string name="memory_tab_daily">Дневные записи</string>
+    <string name="memory_facts_empty">Фактов не найдено</string>
+    <string name="memory_daily_empty">Дневных записей не найдено</string>
+    <string name="memory_select">Выбрать</string>
+    <string name="memory_more">Ещё</string>
+    <string name="memory_refresh">Обновить</string>
+    <string name="memory_export">Экспорт памяти</string>
+    <string name="memory_import">Импорт памяти</string>
+    <string name="memory_selected_count">Выбрано: %d</string>
+    <string name="memory_cancel_selection">Отменить выбор</string>
+    <string name="memory_select_all">Выбрать все</string>
+    <string name="memory_delete_selected">Удалить выбранное</string>
+    <string name="memory_delete_fact_title">Удалить факт?</string>
+    <string name="memory_delete_fact_message">Вы уверены, что хотите удалить факт «%s»?</string>
+    <string name="memory_bulk_delete_title">Удалить выбранные факты?</string>
+    <string name="memory_bulk_delete_message">Вы уверены, что хотите удалить %d фактов?</string>
+    <string name="memory_scope_all">Все</string>
+    <string name="memory_scope_user">👤 Пользователь</string>
+    <string name="memory_scope_ai">🤖 AI</string>
+    <string name="memory_scope_global">🌍 Глобальные</string>
+    <string name="memory_export_title">Экспорт памяти</string>
+    <string name="memory_export_desc">Скопируйте Markdown текст ниже или сохраните его в файл для резервного копирования.</string>
+    <string name="memory_export_markdown_label">Markdown</string>
+    <string name="memory_export_copied">Скопировано в буфер обмена</string>
+    <string name="memory_export_copy">Копировать</string>
+    <string name="memory_import_title">Импорт памяти</string>
+    <string name="memory_import_desc">Вставьте Markdown текст из экспорта Pai_Android или OpenClaw.</string>
+    <string name="memory_import_text_label">Markdown текст</string>
+    <string name="memory_import_placeholder">Вставьте Markdown текст здесь…</string>
+    <string name="memory_import_button">Импортировать</string>
+    <string name="memory_import_success">Импорт успешен</string>
+    <string name="memory_import_errors">Ошибки импорта</string>
+    <string name="memory_import_stats">Фактов: %d, записей: %d</string>
+    <string name="memory_import_errors_label">Ошибки:</string>
+
+    <!-- FactEditDialog -->
+    <string name="fact_edit_title">Редактирование факта</string>
+    <string name="fact_edit_category">Категория: %s</string>
+    <string name="fact_edit_scope">Scope: %s</string>
+    <string name="fact_edit_key_label">Ключ</string>
+    <string name="fact_edit_value_label">Значение</string>
+    <string name="fact_edit_confidence_label">Уверенность: %d%%</string>
+    <string name="fact_edit_confidence_min">0%</string>
+    <string name="fact_edit_confidence_max">100%</string>
+
+    <!-- FactConfirmationDialog -->
+    <string name="fact_confirm_title">Подтвердите факт</string>
+    <string name="fact_confirm_category_label">Категория:</string>
+    <string name="fact_confirm_key_label">Ключ:</string>
+    <string name="fact_confirm_context_label">Контекст:</string>
+    <string name="fact_confirm_confidence_label">Уверенность AI:</string>
+    <string name="fact_confirm_user_scope">👤 Пользователь</string>
+    <string name="fact_confirm_ai_scope">🤖 AI ассистент</string>
+    <string name="fact_confirm_global_scope">🌍 Общая информация</string>
+    <string name="fact_confirm_high_confidence">Высокая уверенность</string>
+    <string name="fact_confirm_medium_confidence">Средняя уверенность</string>
+    <string name="fact_confirm_low_confidence">Низкая уверенность</string>
+    <string name="fact_confirm_corrected_label">Исправленное значение</string>
+    <string name="fact_confirm_corrected_placeholder">Введите правильное значение</string>
+    <string name="fact_confirm_extracted_label">Извлечённое значение:</string>
+    <string name="fact_confirm_tags_label">Теги:</string>
+    <string name="fact_confirm_confirm_button">Подтвердить</string>
+    <string name="fact_confirm_save_correction">Сохранить исправление</string>
+    <string name="fact_confirm_correct_button">Исправить</string>
+    <string name="fact_confirm_reject_button">Отклонить</string>
+
+    <!-- RouterSettingsScreen -->
+    <string name="router_settings_title">Настройки сети</string>
+
+    <!-- Missing ProviderSettings labels -->
+    <string name="provider_default_model_label">Модель по умолчанию</string>
+    <string name="provider_requires_key_label">Требуется API ключ</string>
+    <string name="provider_url_label">URL</string>
+    <string name="provider_default_url_label">URL по умолчанию</string>
+
+    <!-- Missing RoleListScreen titles -->
+    <string name="roles_title">Роли AI</string>
+    <string name="roles_empty">Нет созданных ролей</string>
+    <string name="roles_empty_hint">Нажмите + чтобы создать первую роль</string>
+    <string name="role_default">Роль по умолчанию</string>
+    <string name="add">Добавить</string>
+    <string name="edit">Редактировать</string>
+    <string name="roles_delete_message">Роль будет удалена без возможности восстановления. Это не затронет существующие чаты, но они потеряют связь с этой ролью.</string>
+
+    <!-- Missing RoleListScreen labels -->
+    <string name="role_save">Сохранить</string>
+    <string name="role_cancel">Отмена</string>
+    <string name="role_title_placeholder">Название роли</string>
+    <string name="role_system_prompt">Системный промпт</string>
+    <string name="role_context">Контекст</string>
+    <string name="role_temperature">Температура</string>
+    <string name="role_max_tokens">Макс. токенов</string>
+
+    <!-- Missing WebSearchScreen labels -->
+    <string name="web_search_use_external">Использовать внешние API</string>
+    <string name="web_search_provider">Провайдер поиска</string>
+    <string name="web_search_test_success">Соединение успешно</string>
+    <string name="web_search_test_fail">Ошибка соединения</string>
+    <string name="web_search_google_fields_hint">%1$s и %2$s</string>
+
+    <!-- Missing AppearanceScreen labels -->
+    <string name="appearance_reset_defaults">Вернуть к значениям по умолчанию</string>
+
+    <!-- Missing ProactiveScreen labels -->
+    <string name="proactive_min_priority">Порог важности</string>
+    <string name="proactive_min_priority_desc">Минимальный порог важности уведомлений: %d</string>
+    <string name="proactive_bottom_hint">Проактивный режим можно отключить в любое время в настройках.</string>
+
+    <!-- Missing Memory labels -->
+    <string name="memory_confidence_high">Высокая уверенность</string>
+    <string name="memory_confidence_medium">Средняя уверенность</string>
+    <string name="memory_confidence_low">Низкая уверенность</string>
+
+    <!-- Hints -->
+    <string name="hint_icon_label">Подсказка</string>
+    <string name="hint_dialog_title">Подсказка</string>
+
+    <!-- Language -->
+    <string name="settings_language">Язык приложения</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_english">English</string>
+
+    <!-- Missing TODOs -->
+    <string name="camera_front">Фронтальная</string>
+    <string name="camera_back">Основная</string>
+    <string name="camera_captured_count">Снимков: %d</string>
+    <string name="chat_detail_retry">Повторить</string>
+    <string name="chat_detail_error_save">Ошибка сохранения: %s</string>
+    <string name="chat_detail_error_copy">Ошибка копирования: %s</string>
+    <string name="chat_detail_error_delete">Ошибка удаления: %s</string>
+    <string name="chat_detail_error_voice">Ошибка голосового ввода: %s</string>
+    <string name="chat_detail_toolbar_expand">Показать инструменты</string>
+    <string name="chat_detail_toolbar_collapse">Свернуть панель инструментов</string>
+    <string name="chat_detail_search_clear">Очистить поиск</string>
+    <string name="chat_detail_code_copied">Код скопирован</string>
+    <string name="chat_detail_text_copied">Текст скопирован</string>
+    <string name="log_terminal_export_error">Ошибка экспорта</string>
+    <string name="log_terminal_search_clear">Очистить</string>
+    <string name="scheduler_edit">Редактировать</string>
+    <string name="scheduler_unnamed">Без названия</string>
+    <string name="scheduler_n_times">(%d раз)</string>
+    <string name="memory_bulk_delete">Удалить выбранные (%d)</string>
+    <string name="voice_error">Ошибка</string>
+    <string name="log_filter_all">Все</string>
+
+    <!-- Navigation -->
+    <string name="nav_chat_list">Чаты</string>
+    <string name="nav_settings">Настройки</string>
+</resources>
