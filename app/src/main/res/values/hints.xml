@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hint_settings_language">Выберите язык интерфейса приложения. Изменение вступит в силу сразу после перезапуска экрана.</string>
+    <string name="hint_settings_ai_providers">Настройте API-ключи и модели для AI-провайдеров. Поддерживаются DeepSeek, OpenAI и другие. Без ключа приложение не сможет обрабатывать запросы.</string>
+    <string name="hint_settings_roles">Роли задают системный промпт — поведение AI. Можно создать несколько ролей с разными характерами и переключаться между ними в чате.</string>
+    <string name="hint_settings_web_search">Включите веб-поиск, чтобы AI мог находить актуальную информацию в интернете. Доступны Google Custom Search, Tavily и встроенный DuckDuckGo (без ключа).</string>
+    <string name="hint_settings_appearance">Настройте тему (светлая/тёмная/системная), динамические цвета Material You (Android 12+) и акцентный цвет.</string>
+    <string name="hint_settings_proactive">Проактивный режим автоматически напоминает о событиях календаря, низком заряде батареи и важных уведомлениях. Можно настроить тихие часы и порог важности.</string>
+    <string name="hint_settings_memory">Управление долговременной памятью AI: факты о пользователе, дневные записи, экспорт и импорт данных. Память помогает AI лучше понимать контекст.</string>
+    <string name="hint_settings_scheduler">Настройте запланированные задачи — ежедневные отчёты, мониторинг, напоминания. Задачи выполняются в фоновом режиме.</string>
+    <string name="hint_settings_skill_store">Установите внешние навыки из магазина или через URL. Навыки расширяют возможности AI: погода, новости, управление домом.</string>
+    <string name="hint_settings_voice">Настройте голосовое управление: wake word для активации, распознавание речи (Vosk), синтез речи (TTS).</string>
+    <string name="hint_settings_logs">Просмотр логов агента в реальном времени. Полезно для отладки и мониторинга работы AI.</string>
+    <string name="hint_chat_detail_voice">Нажмите на микрофон, чтобы ввести сообщение голосом. Распознавание работает на устройстве через Vosk.</string>
+    <string name="hint_chat_detail_camera">Сделайте фото или выберите из галереи. AI может проанализировать изображение и описать его.</string>
+    <string name="hint_chat_detail_file">Прикрепите файл: изображение, документ, аудио или код. AI поддерживает анализ различных форматов.</string>
+    <string name="hint_chat_detail_code">Используйте кнопку копирования кода для быстрого копирования. Код можно сохранить в отдельный файл.</string>
+    <string name="hint_memory_fact">Факты — это ключевая информация о вас, которую AI запоминает. Можно добавлять, редактировать и удалять факты вручную.</string>
+    <string name="hint_memory_export">Экспортируйте память в Markdown для резервного копирования или переноса на другое устройство. Импорт поддерживает тот же формат.</string>
+
+    <!-- Provider field hints -->
+    <string name="hint_provider_api_key">API ключ необходим для доступа к AI-провайдеру. Получить ключ можно в личном кабинете провайдера. Храните ключ в безопасности.</string>
+    <string name="hint_provider_api_key_deepseek">Ключ необходимо сгенерировать на странице API-ключей DeepSeek. Ссылка: https://platform.deepseek.com/api_keys</string>
+    <string name="hint_provider_api_key_openai">Ключ необходимо сгенерировать на странице API-ключей OpenAI. Ссылка: https://platform.openai.com/api-keys</string>
+    <string name="hint_provider_model">Название модели AI, которая будет обрабатывать запросы. Уточните актуальные модели на сайте провайдера.</string>
+    <string name="hint_provider_model_deepseek">Актуальные модели DeepSeek и их цены: https://api-docs.deepseek.com/quick_start/pricing#model-details</string>
+    <string name="hint_provider_model_openai">Список доступных моделей OpenAI: https://platform.openai.com/docs/models</string>
+    <string name="hint_provider_base_url">Базовый URL API-эндпоинта. Обычно заполняется автоматически при выборе провайдера, но можно изменить для кастомных endpoint\'ов.</string>
+</resources>

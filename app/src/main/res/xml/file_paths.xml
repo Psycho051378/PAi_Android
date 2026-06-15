@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Workspace in internal files dir -->
+    <files-path name="workspace_internal" path="workspace/" />
+    <!-- Workspace in external files dir -->
+    <external-files-path name="workspace_external" path="workspace/" />
+    <!-- Internal cache dir for temp files -->
+    <cache-path name="cache" path="/" />
+</paths>
