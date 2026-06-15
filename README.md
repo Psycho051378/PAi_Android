@@ -66,10 +66,19 @@ _Coming soon — the app is in active development. Screenshots will be added wit
 ## 🚀 Getting Started
 
 ### Prerequisites
+
+**⚠️ Important: JDK 17 is REQUIRED.**
+
+The project uses Android Gradle Plugin 8.2.0 which is **not compatible with JDK 21+** (including JetBrains Runtime 23 bundled with recent Android Studio).
+
+- **JDK 17** — Download from [Eclipse Adoptium](https://adoptium.net/temurin/releases/?version=17)
 - Android Studio Hedgehog (2023.1.1+) or later
-- JDK 17+
 - Android SDK 34+
 - A physical device or emulator running Android 14+
+
+> **Windows users:** If you get a `jlink.exe` error during build, go to
+> `File → Settings → Build, Execution, Deployment → Build Tools → Gradle`
+> and set **Gradle JDK** to your JDK 17 installation.
 
 ### Build & Install
 
