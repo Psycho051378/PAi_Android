@@ -25,8 +25,8 @@ data class ScheduledTask(
         val DEFAULT_TASKS = listOf(
             ScheduledTask(
                 id = "daily_monitoring",
-                name = "Ежедневный мониторинг",
-                prompt = "Выполни ежедневный мониторинг конфликта США-Иран",
+                name = "Ежедневный дайджест",
+                prompt = "Выполни анализ мировых новостей за предыдущие сутки. Используй BBC News, Reuters, AP News, The Guardian. Сформируй структурированную сводку: главные события, региональные акценты, экономика и технологии. Нейтральный тон.",
                 cronExpression = "09:00"
             ),
             ScheduledTask(
