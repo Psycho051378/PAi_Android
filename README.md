@@ -17,7 +17,7 @@
 - **Multi-provider AI** — DeepSeek, OpenAI, OpenRouter, Ollama, Custom endpoints
 - **Deterministic router** — Fast command routing without LLM for common intents
 - **Task queue** — Sequential async execution with auto-approval for long tasks
-- **Code generation** — Generate and execute Kotlin code from plain text queries
+- **Code generation** — Generate and execute Python code from plain text queries
 
 ### 📡 Communication & Skills
 - **Email** — Read, search, send, forward via IMAP/SMTP
