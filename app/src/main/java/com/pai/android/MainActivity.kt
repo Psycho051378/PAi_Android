@@ -4,27 +4,26 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import com.pai.android.agent.tools.LocaleManager
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import com.pai.android.agent.TaskScheduler
+import com.pai.android.agent.tools.LocaleManager
+import com.pai.android.data.model.Message
+import com.pai.android.data.repository.ChatRepository
+import com.pai.android.data.repository.MemoryRepository
 import com.pai.android.data.repository.ProviderSettingsRepository
 import com.pai.android.data.repository.RoleRepository
 import com.pai.android.ui.navigation.PaiNavigation
+import com.pai.android.ui.navigation.Screen
 import com.pai.android.ui.theme.PaiAndroidTheme
 import com.pai.android.ui.theme.ThemeWrapper
 import com.pai.android.agent.DecisionEngine
-import com.pai.android.data.model.Message
-import com.pai.android.data.repository.ChatRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,60 +33,67 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var settingsRepository: ProviderSettingsRepository
     @Inject lateinit var roleRepository: RoleRepository
-    @Inject lateinit var taskScheduler: com.pai.android.agent.TaskScheduler
+    @Inject lateinit var taskScheduler: TaskScheduler
     @Inject lateinit var chatRepository: ChatRepository
-    @Inject lateinit var memoryRepository: com.pai.android.data.repository.MemoryRepository
+    @Inject lateinit var memoryRepository: MemoryRepository
 
     private lateinit var localeManager: LocaleManager
+    private var servicesStarted = false
 
     override fun attachBaseContext(newBase: Context) {
         localeManager = LocaleManager(newBase)
         super.attachBaseContext(localeManager.applyLocale(newBase))
     }
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { requestLocationPermissions() }
-
-    private val locationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { startAgentServices() }
-
-    private fun requestLocationPermissions() {
-        val permissions = mutableListOf(
-            android.Manifest.permission.ACCESS_FINE_LOCATION,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            permissions.add(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
-        locationPermissionLauncher.launch(permissions.toTypedArray())
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Request notification permission on Android 13+ — service starts after grant
-        val needPermission = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (needPermission) {
-            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            requestLocationPermissions()
+        // Проверяем, проходил ли пользователь онбординг
+        val onboardingComplete = isOnboardingComplete()
+
+        // Если онбординг пройден — запускаем сервисы сразу (разрешения уже есть)
+        if (onboardingComplete) {
+            startAgentServices()
         }
+
         setContent {
             ThemeWrapper {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) { PaiApp() }
+                ) {
+                    PaiApp(startDestination = if (onboardingComplete) Screen.ChatList.route else Screen.Permissions.route)
+                }
             }
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Если онбординг только что завершён (например, после возврата из PermissionsScreen),
+        // запускаем сервисы, которые ещё не стартовали
+        if (!servicesStarted && isOnboardingComplete()) {
+            startAgentServices()
+        }
+    }
+
+    /**
+     * Проверить, завершён ли онбординг разрешений.
+     */
+    private fun isOnboardingComplete(): Boolean {
+        return getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE)
+            .getBoolean("onboarding_complete", false)
+    }
+
+    /**
+     * Запустить фоновые сервисы агента.
+     * Вызывается после того, как все необходимые разрешения получены.
+     */
     private fun startAgentServices() {
+        if (servicesStarted) return
+        servicesStarted = true
+
         // Create notification channel for proactive alerts
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = android.app.NotificationChannel(
@@ -176,8 +182,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PaiApp() {
-    PaiNavigation()
+fun PaiApp(startDestination: String = Screen.ChatList.route) {
+    PaiNavigation(startDestination = startDestination)
 }
 
 @Preview(showBackground = true)

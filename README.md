@@ -53,6 +53,7 @@
 - **Voice control** — Vosk offline speech recognition + TTS
 - **Appearance customization** — Material You dynamic colors, light/dark/system themes
 - **Multi-language UI** — Russian and English interface with instant switching
+- **Permissions onboarding** — First-launch wizard for 12 key permissions with "Grant All" button and system settings redirect for Notification Listener
 - **Built-in hint system** — Contextual tooltips explaining settings and features
 
 ---
@@ -95,7 +96,14 @@ cd pai-android
 ```
 
 ### First Run
-1. Open the app — you'll see an empty chat screen
+1. **Permissions Onboarding** — On first launch, you'll see a permissions wizard listing all 12 required permissions with icons and descriptions:
+   - Notifications, Location, Microphone, Camera, Phone, Call Log
+   - SMS, Contacts, Calendar, Images (Android 13+), Notification Listener
+   - Tap **"Grant All"** to request all runtime permissions at once, or grant individually
+   - For **Notification Listener**, you'll be redirected to system settings
+   - A **language switch** (RU/EN) is available in the top bar
+   - Once all permissions are granted, tap **"Continue"** to enter the app
+   - You can **skip** the wizard — agent features requiring those permissions will be limited
 2. Go to **Settings → AI Providers** to configure your API key
 3. Start chatting! The AI agent will use your configured provider
 

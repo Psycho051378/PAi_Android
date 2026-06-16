@@ -495,4 +495,46 @@
     <!-- Navigation -->
     <string name="nav_chat_list">Chats</string>
     <string name="nav_settings">Settings</string>
+
+    <!-- Permissions Onboarding -->
+    <string name="permissions_title">PAi Permissions</string>
+    <string name="permissions_subtitle">The agent needs access to the following capabilities of your device</string>
+    <string name="permissions_grant_all">Grant All</string>
+    <string name="permissions_skip">Skip</string>
+    <string name="permissions_granted">✅ Granted</string>
+    <string name="permissions_denied">❌ Denied</string>
+    <string name="permissions_required">Required</string>
+    <string name="permissions_system_settings">⚙️ Open Settings</string>
+    <string name="permissions_continue">Continue</string>
+    <string name="permissions_all_done">All permissions granted!</string>
+    <string name="permissions_all_done_desc">PAi agent is ready to work on your device.</string>
+    <string name="permissions_skip_warning_title">Skip permissions?</string>
+    <string name="permissions_skip_warning_message">Some agent features will not be available. You can request them later in Settings.</string>
+    <string name="permissions_skip_confirm">Yes, skip</string>
+
+    <!-- Permission names -->
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_notifications_desc">Proactive alerts and reminders from the agent</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_location_desc">Location detection for contextual hints</string>
+    <string name="perm_microphone">Microphone</string>
+    <string name="perm_microphone_desc">Voice input for commands and messages</string>
+    <string name="perm_camera">Camera</string>
+    <string name="perm_camera_desc">Photo analysis, scanning and recognition</string>
+    <string name="perm_phone">Phone</string>
+    <string name="perm_phone_desc">Make calls on agent command</string>
+    <string name="perm_call_log">Call Log</string>
+    <string name="perm_call_log_desc">Read missed and received call information</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_sms_desc">Send and read SMS messages</string>
+    <string name="perm_contacts">Contacts</string>
+    <string name="perm_contacts_desc">Search and manage contacts</string>
+    <string name="perm_calendar">Calendar</string>
+    <string name="perm_calendar_desc">Read and create calendar events</string>
+    <string name="perm_media_images">Images</string>
+    <string name="perm_media_images_desc">Gallery access for analysis and processing</string>
+    <string name="perm_notification_listener">Notification Access</string>
+    <string name="perm_notification_listener_desc">Listen to notifications from other apps (system setting)</string>
+    <string name="perm_manage_storage">Storage Management</string>
+    <string name="perm_manage_storage_desc">Full file access (legacy Android versions)</string>
 </resources>

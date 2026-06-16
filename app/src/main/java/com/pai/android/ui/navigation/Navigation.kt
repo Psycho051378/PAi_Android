@@ -14,6 +14,7 @@ import com.pai.android.ui.screens.CameraScreen
 import com.pai.android.ui.screens.ChatDetailScreen
 import com.pai.android.ui.screens.ChatListScreen
 import com.pai.android.ui.screens.MemoryManagementScreen
+import com.pai.android.ui.screens.PermissionsScreen
 import com.pai.android.ui.screens.SchedulerTasksScreen
 import com.pai.android.ui.screens.SkillStoreScreen
 import com.pai.android.ui.screens.ProviderSettingsScreen
@@ -87,17 +88,19 @@ sealed class Screen(val route: String) {
     object SkillStore : Screen("skill_store")
     object VoiceSettings : Screen("voice_settings")
     object RouterSettings : Screen("router_settings")
+    object Permissions : Screen("permissions")
 
 }
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun PaiNavigation(
-    navController: NavHostController = rememberAnimatedNavController()
+    navController: NavHostController = rememberAnimatedNavController(),
+    startDestination: String = Screen.ChatList.route
 ) {
     AnimatedNavHost(
         navController = navController,
-        startDestination = Screen.ChatList.route
+        startDestination = startDestination
     ) {
         // Главный экран чатов - без анимации при старте
         composable(
@@ -266,6 +269,28 @@ fun PaiNavigation(
         ) {
             VoiceSettingsScreen(
                 onNavigateBack = { navController.navigateUp() }
+            )
+        }
+
+        // Экран разрешений (онбординг) — без анимации возврата
+        composable(
+            route = Screen.Permissions.route,
+            enterTransition = { null },
+            exitTransition = { null },
+            popEnterTransition = { NavigationAnimations.fadeInAnim },
+            popExitTransition = { NavigationAnimations.fadeOutAnim }
+        ) {
+            PermissionsScreen(
+                onComplete = {
+                    navController.navigate(Screen.ChatList.route) {
+                        popUpTo(Screen.Permissions.route) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Screen.ChatList.route) {
+                        popUpTo(Screen.Permissions.route) { inclusive = true }
+                    }
+                }
             )
         }
 
