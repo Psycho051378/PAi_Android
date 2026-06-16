@@ -64,6 +64,19 @@ _Coming soon — the app is in active development. Screenshots will be added wit
 
 ---
 
+## 📥 Download
+
+You can download the latest debug APK directly:
+
+| File | Size | Android | Build |
+|------|------|---------|-------|
+| [`PAi_Android-debug.apk`](https://github.com/Psycho051378/PAi_Android/raw/main/apk/PAi_Android-debug.apk) | ~85 MB | 14+ (API 24) | Debug |
+
+> ⚠️ This is a **debug build** — requires `Install from unknown apps` permission.
+> For a release build, clone the repo and run `./gradlew assembleRelease`.
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
