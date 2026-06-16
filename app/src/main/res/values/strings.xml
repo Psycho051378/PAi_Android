@@ -495,4 +495,46 @@
     <!-- Navigation -->
     <string name="nav_chat_list">Чаты</string>
     <string name="nav_settings">Настройки</string>
+
+    <!-- Permissions Onboarding -->
+    <string name="permissions_title">Разрешения PAi</string>
+    <string name="permissions_subtitle">Для работы агента нужен доступ к следующим возможностям устройства</string>
+    <string name="permissions_grant_all">Разрешить всё</string>
+    <string name="permissions_skip">Пропустить</string>
+    <string name="permissions_granted">✅ Разрешено</string>
+    <string name="permissions_denied">❌ Запрещено</string>
+    <string name="permissions_required">Требуется</string>
+    <string name="permissions_system_settings">⚙️ Открыть настройки</string>
+    <string name="permissions_continue">Продолжить</string>
+    <string name="permissions_all_done">Все разрешения предоставлены!</string>
+    <string name="permissions_all_done_desc">Агент PAi готов к полноценной работе на вашем устройстве.</string>
+    <string name="permissions_skip_warning_title">Пропустить разрешения?</string>
+    <string name="permissions_skip_warning_message">Некоторые функции агента будут недоступны. Вы сможете запросить их позже в настройках.</string>
+    <string name="permissions_skip_confirm">Да, пропустить</string>
+
+    <!-- Permission names -->
+    <string name="perm_notifications">Уведомления</string>
+    <string name="perm_notifications_desc">Проактивные оповещения и напоминания от агента</string>
+    <string name="perm_location">Геолокация</string>
+    <string name="perm_location_desc">Определение местоположения для контекстных подсказок</string>
+    <string name="perm_microphone">Микрофон</string>
+    <string name="perm_microphone_desc">Голосовой ввод команд и сообщений</string>
+    <string name="perm_camera">Камера</string>
+    <string name="perm_camera_desc">Фотоанализ, сканирование и распознавание</string>
+    <string name="perm_phone">Звонки</string>
+    <string name="perm_phone_desc">Совершение звонков по команде агента</string>
+    <string name="perm_call_log">Журнал звонков</string>
+    <string name="perm_call_log_desc">Чтение информации о пропущенных и принятых звонках</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_sms_desc">Отправка и чтение SMS-сообщений</string>
+    <string name="perm_contacts">Контакты</string>
+    <string name="perm_contacts_desc">Поиск и управление контактами</string>
+    <string name="perm_calendar">Календарь</string>
+    <string name="perm_calendar_desc">Чтение и создание событий календаря</string>
+    <string name="perm_media_images">Изображения</string>
+    <string name="perm_media_images_desc">Доступ к галерее для анализа и обработки</string>
+    <string name="perm_notification_listener">Мониторинг уведомлений</string>
+    <string name="perm_notification_listener_desc">Прослушивание уведомлений от других приложений (системная настройка)</string>
+    <string name="perm_manage_storage">Управление хранилищем</string>
+    <string name="perm_manage_storage_desc">Полный доступ к файлам (устаревшие версии Android)</string>
 </resources>
