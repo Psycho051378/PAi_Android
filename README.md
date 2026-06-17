@@ -98,7 +98,7 @@ The project uses Android Gradle Plugin 8.2.0 which is **not compatible with JDK 
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/pai-android.git
+git clone https://github.com/Psycho051378/PAi_Android.git
 cd pai-android
 
 # Build debug APK
