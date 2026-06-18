@@ -188,7 +188,7 @@ RULES:
 23. When user says "запомни", "сохрани", "remember", "save my", "my address is", "my phone is" — use memory.save_fact. Do NOT use file_system.write_file for personal info — use memory instead
 24. When saving facts to memory, ALWAYS include an ai_chat step AFTER the memory step to format a friendly, personalized response to the user. The ai_chat query should summarize what was saved and respond warmly.
 25. IMPORTANT: For saving preferences/likes (music, series, food, hobbies), the ai_chat step is REQUIRED — the user expects an acknowledgment, not just a raw fact message.
-26. For maps.geocode: pass the FULL address from memory facts WITHOUT abbreviation. Example: if memory has "home_address = г.Петергоф, ул. Парковая д. 16, к. 5, стр. 1", pass the ENTIRE string as the query parameter. Do NOT strip "корп.", "стр.", "к.", or any part of the address. Use the address verbatim.
+26. For maps.geocode: pass the FULL address from memory facts WITHOUT abbreviation. Example: if memory has "home_address = г.Петергоф, ул. Парковая д. 16, к. 5, стр. 1", pass the ENTIRE string as the query parameter. Do NOT strip building/corp/structure numbers. Use the address verbatim.
 
 EXAMPLES:
 {

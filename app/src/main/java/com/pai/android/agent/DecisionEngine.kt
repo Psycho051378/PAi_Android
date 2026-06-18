@@ -2407,7 +2407,7 @@ class DecisionEngine @Inject constructor(
             files, use the office/word/excel/pptx/powerpoint tool. Do NOT use Python for Office files —
             the office skill handles everything. Python's python-pptx is NOT available on this device.
 
-            ADDRESSES FROM MEMORY: When using a saved address (home_address, work_address) for maps.geocode, pass the ENTIRE address string verbatim. Do NOT truncate buildings, corps, structures. Example: if fact says "г.Петергоф, ул. Парковая д. 16, к. 5, стр. 1" — pass all of it to geocode.
+            ADDRESSES FROM MEMORY: When using a saved address (home_address, work_address, or any other) for maps.geocode or maps_open, pass the ENTIRE address string verbatim without dropping any parts. Do NOT truncate building numbers, corps, structures, or apartments. The exact building matters for navigation.
 
             ANDROID ENVIRONMENT: aarch64, 8 CPU cores (4 physical + 4 SMT), ~7.5 GB RAM,
             88 GB storage. Chaquopy embedded Python 3.12.4 — NO tkinter, NO PyQt, NO subprocess.
