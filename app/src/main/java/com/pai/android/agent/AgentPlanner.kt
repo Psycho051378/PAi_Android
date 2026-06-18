@@ -60,6 +60,7 @@ class AgentPlanner @Inject constructor(
             "task_scheduler" to "create, list, delete scheduled tasks (cron jobs)",
             "location" to "get current GPS location",
             "maps" to "maps & navigation: geocode (address to coordinates), reverse_geocode (coords to address), places_search (find POIs near location - fuel, cafe, atm, restaurant, pharmacy, hospital, supermarket, parking, hotel, school), route (driving directions with distance and time), maps_open (open location in Google Maps or Yandex Maps app)",
+            "memory" to "save and search facts in permanent memory. Use save_fact to store user info (name, address, phone, preferences). Use search_facts to look up saved info",
             "home" to "control smart home devices (router, lights, etc.)",
             "ai_chat" to "direct AI answer without tools"
         )
@@ -183,6 +184,8 @@ RULES:
 19. For maps: action=geocode (query=address), action=reverse_geocode (lat, lon), action=places_search (lat, lon, type=fuel|cafe|atm|restaurant|pharmacy|hospital|supermarket|parking|hotel|school, radius=1000, limit=5), action=route (from_lat, from_lon, to_lat, to_lon), action=maps_open (lat, lon [or to_lat, to_lon])
 20. For route building: ALWAYS call location(current) first for current coords, then maps(geocode) for destination if needed, then maps(route), then maps(maps_open) to show on actual map app. DO NOT generate verbal walking/driving directions from AI knowledge — use maps tools.
 21. Results from previous steps are available as {variable_name} in params of following steps
+22. For memory: command=save_fact to store info (category=locations for addresses, category=personal_info for name/birth/profession, category=contacts for phone/email, category=preferences for likes/hobbies). Also: command=search_facts to look up saved facts, command=get_fact to get specific fact by category+key
+23. When user says "запомни", "сохрани", "remember", "save my", "my address is", "my phone is" — use memory.save_fact. Do NOT use file_system.write_file for personal info — use memory instead
 
 EXAMPLES:
 {
@@ -238,6 +241,12 @@ EXAMPLES:
     {"skill": "maps", "params": {"action": "maps_open", "from_lat": "{my_location.latitude}", "from_lon": "{my_location.longitude}", "to_lat": "{destination.lat}", "to_lon": "{destination.lon}"}}
   ],
   "reasoning": "Get current location, geocode the Hermitage, calculate route, show on maps"
+}
+
+{
+  "requires_planning": false,
+  "steps": [{"skill": "memory", "params": {"command": "save_fact", "category": "locations", "key": "home_address", "value": "г.Петергоф, ул. Парковая д.16", "scope": "global", "confidence": 1.0}}],
+  "reasoning": "User provided home address — save to permanent memory for later use in routes"
 }
 
 Пользовательский запрос: "$query"
