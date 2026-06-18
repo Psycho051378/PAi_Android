@@ -186,6 +186,8 @@ RULES:
 21. Results from previous steps are available as {variable_name} in params of following steps
 22. For memory: command=save_fact to store info (category=locations for addresses, category=personal_info for name/birth/profession, category=contacts for phone/email, category=preferences for likes/hobbies). Scope is determined automatically by category — do NOT pass scope/confidence params. Also: command=search_facts to look up saved facts, command=get_fact to get specific fact by category+key
 23. When user says "запомни", "сохрани", "remember", "save my", "my address is", "my phone is" — use memory.save_fact. Do NOT use file_system.write_file for personal info — use memory instead
+24. When saving facts to memory, ALWAYS include an ai_chat step AFTER the memory step to format a friendly, personalized response to the user. The ai_chat query should summarize what was saved and respond warmly.
+25. IMPORTANT: For saving preferences/likes (music, series, food, hobbies), the ai_chat step is REQUIRED — the user expects an acknowledgment, not just a raw fact message.
 
 EXAMPLES:
 {
@@ -247,7 +249,15 @@ EXAMPLES:
   "requires_planning": false,
   "steps": [{"skill": "memory", "params": {"command": "save_fact", "category": "locations", "key": "home_address", "value": "г.Петергоф, ул. Парковая д.16"}}],
   "reasoning": "User provided home address — save to permanent memory for later use in routes"
-}
+},
+    {
+      "requires_planning": true,
+      "steps": [
+        {"skill": "memory", "params": {"command": "save_fact", "category": "preferences", "key": "favorite_band", "value": "Nirvana"}, "result_as": "saved"},
+        {"skill": "ai_chat", "params": {"query": "User shared their favorite band. Respond warmly acknowledging this preference."}}
+      ],
+      "reasoning": "Save the band preference, then respond warmly"
+    }
 
 Пользовательский запрос: "$query"
 Ответь JSON."""
