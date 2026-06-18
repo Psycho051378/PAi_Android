@@ -236,7 +236,7 @@ class MemoryRepository(
      * Получает факты для обогащения промпта AI.
      * Возвращает факты с высокой уверенностью, наиболее релевантные текущему контексту.
      */
-    suspend fun getFactsForPrompt(context: String = "", limit: Int = 10): List<PermanentMemory> {
+    suspend fun getFactsForPrompt(context: String = "", limit: Int = 25): List<PermanentMemory> {
         // Если есть контекст, ищем связанные факты
         if (context.isNotBlank()) {
             val relatedFacts = memoryDao.findRelatedFacts(context, limit)
@@ -450,7 +450,7 @@ class MemoryRepository(
      * Получает факты для обогащения промпта AI с учётом scope.
      * Приоритет: AI факты → пользовательские факты → глобальные факты.
      */
-    suspend fun getFactsForPromptWithScope(context: String = "", limit: Int = 15): List<PermanentMemory> {
+    suspend fun getFactsForPromptWithScope(context: String = "", limit: Int = 30): List<PermanentMemory> {
         // Если есть контекст, ищем связанные факты
         if (context.isNotBlank()) {
             val relatedFacts = memoryDao.findRelatedFacts(context, limit)
@@ -1399,7 +1399,7 @@ class MemoryRepository(
     /**
      * Ищет релевантные факты по запросу (во всех scope).
      */
-    suspend fun searchRelevantFacts(query: String, limit: Int = 10): List<PermanentMemory> {
+    suspend fun searchRelevantFacts(query: String, limit: Int = 25): List<PermanentMemory> {
         return searchPermanentFacts(query, limit)
     }
     
