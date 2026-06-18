@@ -340,14 +340,20 @@ class DecisionEngine @Inject constructor(
                     ""
                 }
 
-                // Склеиваем контекст устройства с пользовательским контекстом
-                val combinedContext = if (deviceContext.isNotBlank() && context.isNotBlank()) {
-                    deviceContext + "\n\n" + context
-                } else if (deviceContext.isNotBlank()) {
-                    deviceContext
-                } else {
-                    context
+                // Добавляем сохранённые факты из памяти (адреса, имя, предпочтения — всё, что пользователь просил запомнить)
+                val memoryFactsContext = try {
+                    memoryRepository.formatFactsForPromptWithScope(query)
+                } catch (e: Exception) {
+                    println("⚠️ Memory facts error: ${e.message}")
+                    ""
                 }
+
+                // Склеиваем контекст устройства с пользовательским контекстом и фактами
+                val combinedContext = buildString {
+                    if (deviceContext.isNotBlank()) appendLine(deviceContext)
+                    if (memoryFactsContext.isNotBlank()) appendLine(memoryFactsContext)
+                    if (context.isNotBlank()) appendLine(context)
+                }.trimEnd()
 
                 // ── Vision: если есть изображения — отправляем напрямую, минуя ReAct ──
                 val imageAttachments = fileAttachments.filter {
