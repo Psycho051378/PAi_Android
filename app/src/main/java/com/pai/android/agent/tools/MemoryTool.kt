@@ -190,20 +190,25 @@ class MemoryTool constructor(
             }
         }
         
-        // Стандартное сохранение одного факта
-        val scope = when {
+        // Определяем scope: сначала из params, потом по категории
+        val explicitScope = params["scope"] as? String
+        val scope = explicitScope ?: when {
             category.contains("personal", ignoreCase = true) -> "user"
+            category.contains("preferences", ignoreCase = true) -> "user"
+            category.contains("contacts", ignoreCase = true) -> "user"
             category.contains("ai", ignoreCase = true) -> "ai"
+            category.contains("locations", ignoreCase = true) -> "global"
             else -> "global"
         }
         
+        val scopeForDisplay = getScopeEmoji(scope)
         memoryRepository.insertPermanentFact(PermanentMemory(
             category = category, key = key, value = value,
             confidence = confidence, scope = scope, tags = tags
         ))
         
         return ToolResult.Success(
-            output = "Факт сохранён: [$category] $key = $value (${String.format("%.0f", confidence * 100f)}%)",
+            output = "$scopeForDisplay Факт сохранён: [$category] $key = $value (${String.format("%.0f", confidence * 100f)}%)",
             data = mapOf(
                 "category" to category, "key" to key, "value" to value,
                 "scope" to scope, "goal_achieved" to true
