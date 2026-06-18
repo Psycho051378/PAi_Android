@@ -472,27 +472,27 @@ class MemoryRepository(
         val groupedByScope = facts.groupBy { it.scope }
         
         return buildString {
-            append("\n\n[Контекст из памяти]\n")
+            append("\n\n=== СОХРАНЁННЫЕ ФАКТЫ (используй для ответа) ===\n")
             
             // AI факты
             groupedByScope[Scopes.AI]?.let { aiFacts ->
-                append("\n🤖 **Информация об AI:**\n")
+                append("\n**Информация об AI:**\n")
                 aiFacts.forEach { fact ->
                     append("- ${fact.key}: ${fact.value}\n")
                 }
             }
             
-            // Пользовательские факты
+            // Пользовательские факты (имя, дата рождения, предпочтения, адреса людей)
             groupedByScope[Scopes.USER]?.let { userFacts ->
-                append("\n👤 **Информация о пользователе:**\n")
+                append("\n**Данные пользователя (адреса, контакты, предпочтения):**\n")
                 userFacts.forEach { fact ->
-                    append("- ${fact.key}: ${fact.value} (${(fact.confidence * 100).toInt()}%)\n")
+                    append("- ${fact.key}: ${fact.value} (уверенность ${(fact.confidence * 100).toInt()}%)\n")
                 }
             }
             
-            // Глобальные факты
+            // Глобальные факты (домашний/рабочий адреса, общие настройки)
             groupedByScope[Scopes.GLOBAL]?.let { globalFacts ->
-                append("\n🌍 **Общая информация:**\n")
+                append("\n**Мои адреса и настройки (ВАЖНО: используй для маршрутов и ответов):**\n")
                 globalFacts.forEach { fact ->
                     append("- ${fact.key}: ${fact.value}\n")
                 }
