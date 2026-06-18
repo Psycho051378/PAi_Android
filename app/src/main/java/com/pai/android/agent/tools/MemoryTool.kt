@@ -111,10 +111,15 @@ class MemoryTool constructor(
         val scope = params["scope"] as? String ?: "all"
         val limit = params["limit"] as? Int ?: 10
         
-        val facts = if (scope == "all") {
+        var facts = if (scope == "all") {
             memoryRepository.searchRelevantFacts(query, limit)
         } else {
             memoryRepository.searchFactsInScope(scope, query, limit)
+        }
+        
+        // Если SQL LIKE не нашёл (например, latin vs cyrillic mismatch) — fallback к общему контексту
+        if (facts.isEmpty()) {
+            facts = memoryRepository.getFactsForPromptWithScope(query, limit = 20)
         }
         
         return if (facts.isNotEmpty()) {
