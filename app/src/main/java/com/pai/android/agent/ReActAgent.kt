@@ -490,7 +490,7 @@ RESPONSE FORMAT (JSON ONLY):
 
     private suspend fun buildMemoryContext(query: String): String {
         return try {
-            val facts = memoryRepository.searchRelevantFacts(query, limit = 10)
+            val facts = memoryRepository.searchRelevantFacts(query, limit = 25)
             val daily = memoryRepository.searchDailyEntries(query, limit = 5)
             val parts = mutableListOf<String>()
             if (facts.isNotEmpty()) {

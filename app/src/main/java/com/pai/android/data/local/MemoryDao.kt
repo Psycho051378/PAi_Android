@@ -177,7 +177,7 @@ interface MemoryDao {
         ORDER BY confidence DESC, updatedAt DESC 
         LIMIT :limit
     """)
-    suspend fun getFactsForPrompt(limit: Int = 10): List<PermanentMemory>
+    suspend fun getFactsForPrompt(limit: Int = 25): List<PermanentMemory>
     
     /**
      * Увеличивает уверенность факта.
@@ -214,7 +214,7 @@ interface MemoryDao {
         ORDER BY confidence DESC
         LIMIT :limit
     """)
-    suspend fun findRelatedFacts(topic: String, limit: Int = 5): List<PermanentMemory>
+    suspend fun findRelatedFacts(topic: String, limit: Int = 10): List<PermanentMemory>
     
     // ==================== НОВЫЕ ЗАПРОСЫ ДЛЯ ГИБКОЙ СХЕМЫ ====================
     
@@ -291,7 +291,7 @@ interface MemoryDao {
             updatedAt DESC
         LIMIT :limit
     """)
-    suspend fun getFactsForPromptWithScope(limit: Int = 15): List<PermanentMemory>
+    suspend fun getFactsForPromptWithScope(limit: Int = 30): List<PermanentMemory>
     
     /**
      * Получает уникальные теги из всех фактов.
