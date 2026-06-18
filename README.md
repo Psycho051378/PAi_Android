@@ -58,6 +58,18 @@
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="screenshots/Screenshot_20260618_102312.png" width="200" alt="Memory & Address Saving" />
+  <img src="screenshots/Screenshot_20260618_102338.png" width="200" alt="Route Building" />
+  <img src="screenshots/Screenshot_20260618_102443.png" width="200" alt="Agent Interaction" />
+  <img src="screenshots/Screenshot_20260618_102528.png" width="200" alt="Agent Chat" />
+  <img src="screenshots/Screenshot_20260618_102557.png" width="200" alt="Fact Management" />
+</div>
+
+---
+
 ## 🖼 Screenshots
 
 _Coming soon — the app is in active development. Screenshots will be added with the first stable release._
