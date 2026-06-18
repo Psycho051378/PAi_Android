@@ -190,15 +190,20 @@ class MemoryTool constructor(
             }
         }
         
-        // Определяем scope: сначала из params, потом по категории
+        // Определяем scope: сначала из params (если это не просто 'global' по умолчанию), потом по категории
         val explicitScope = params["scope"] as? String
-        val scope = explicitScope ?: when {
-            category.contains("personal", ignoreCase = true) -> "user"
-            category.contains("preferences", ignoreCase = true) -> "user"
-            category.contains("contacts", ignoreCase = true) -> "user"
-            category.contains("ai", ignoreCase = true) -> "ai"
-            category.contains("locations", ignoreCase = true) -> "global"
-            else -> "global"
+        val scope = if (explicitScope != null && explicitScope != "global") {
+            explicitScope  // LLM явно указала user/ai — уважаем
+        } else {
+            // LLM не указала scope или сказала 'global' — определяем по категории
+            when {
+                category.contains("personal", ignoreCase = true) -> "user"
+                category.contains("preferences", ignoreCase = true) -> "user"
+                category.contains("contacts", ignoreCase = true) -> "user"
+                category.contains("ai", ignoreCase = true) -> "ai"
+                category.contains("locations", ignoreCase = true) -> "global"
+                else -> explicitScope ?: "global"
+            }
         }
         
         val scopeForDisplay = getScopeEmoji(scope)
