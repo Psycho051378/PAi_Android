@@ -70,12 +70,6 @@
 
 ---
 
-## 🖼 Screenshots
-
-_Coming soon — the app is in active development. Screenshots will be added with the first stable release._
-
----
-
 ## 📥 Download
 
 You can download the latest debug APK directly:
