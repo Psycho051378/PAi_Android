@@ -51,3 +51,8 @@ memory/
 log.txt
 temp_log.txt
 tmp_log.txt
+
+apk/
+!apk/
+!apk/*.apk
+
