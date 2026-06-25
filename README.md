@@ -16,7 +16,7 @@
 - **ReAct decision loop** — Gather context → Execute tools → Respond, all driven by LLM
 - **Multi-provider AI** — DeepSeek, OpenAI, OpenRouter, Ollama, Custom endpoints
 - **Smart Router** — Routes queries between cloud and local AI based on complexity threshold; hybrid mode (cloud plans + local executes sub-steps) is in development
-- **Local AI providers** — Ollama (on-device/network), Qwen models via LocalAiInteraction for fast, free inference on short tasks
+- **Local AI providers** — Ollama (on-device/network), Gemma and Qwen on-device models via LocalAiInteraction for fast, free inference on short tasks
 - **Deterministic router** — Fast command routing without LLM for common intents
 - **Task queue** — Sequential async execution with auto-approval for long tasks
 - **Code generation** — Generate and execute Python code from plain text queries
@@ -138,7 +138,7 @@ The app supports multiple AI backends. API keys are stored locally and never sen
 | OpenAI | `gpt-3.5-turbo` | ✅ | [platform.openai.com](https://platform.openai.com) |
 | OpenRouter | `openrouter/free` | ✅ | [openrouter.ai](https://openrouter.ai) |
 | Ollama | `llama2` | ❌ | Runs locally on device/network |
-| Local AI | `qwen3` | ❌ | On-device inference via local exec |
+| Local AI | `gemma-4-e2b`, `qwen3` | ❌ | On-device inference via local exec |
 
 Smart Router can be configured in **Settings → Smart Router**:
 - Toggle routing on/off
