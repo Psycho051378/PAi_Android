@@ -81,6 +81,8 @@ data class ChatDetailState(
     val contextUsagePercent: Int? = null, // % заполнения контекстного окна (null = неизвестно)
     val contextLabel: String = "", // Краткая подпись, напр. "45K/1000K"
     val workStatus: String = "", // Текущее действие агента (для UI)
+    val activeModelName: String = "", // Название модели, обрабатывающей запрос
+    val smartRouterEnabled: Boolean = false, // Включён ли Smart Router
     val isProcessingVoice: Boolean = false // Обработка голосового запроса (для кнопки стоп)
 )
 
@@ -502,12 +504,24 @@ class ChatDetailViewModel @Inject constructor(
 
     fun updateWorkStatus(status: String) {
         com.pai.android.agent.DecisionEngine.processingWorkStatus = status
-        _state.update { it.copy(workStatus = status) }
+        _state.update {
+            it.copy(
+                workStatus = status,
+                activeModelName = com.pai.android.agent.DecisionEngine.processingModelName ?: "",
+                smartRouterEnabled = com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled
+            )
+        }
     }
 
     fun clearWorkStatus() {
         com.pai.android.agent.DecisionEngine.processingWorkStatus = null
-        _state.update { it.copy(workStatus = "") }
+        _state.update {
+            it.copy(
+                workStatus = "",
+                activeModelName = com.pai.android.agent.DecisionEngine.processingModelName ?: "",
+                smartRouterEnabled = com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled
+            )
+        }
     }
 
     private suspend fun <T> withWorkStatus(status: String, block: suspend () -> T): T {
