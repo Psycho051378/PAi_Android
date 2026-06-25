@@ -15,6 +15,8 @@
 ### 🧠 Agent Core
 - **ReAct decision loop** — Gather context → Execute tools → Respond, all driven by LLM
 - **Multi-provider AI** — DeepSeek, OpenAI, OpenRouter, Ollama, Custom endpoints
+- **Smart Router** — Hybrid mode: DeepSeek plans complex queries, delegates simple sub-steps to local models (Gemma, Qwen via mlc-llm or exec), DeepSeek compiles results
+- **Local AI providers** — Llama.cpp, Gemma, Qwen running on-device for fast, free inference on short tasks
 - **Deterministic router** — Fast command routing without LLM for common intents
 - **Task queue** — Sequential async execution with auto-approval for long tasks
 - **Code generation** — Generate and execute Python code from plain text queries
@@ -23,7 +25,8 @@
 - **Email** — Read, search, send, forward via IMAP/SMTP
 - **SMS** — Send and read messages with auto-permission handling
 - **Phone calls** — Initiate calls with runtime permission prompts
-- **Contacts** — Search and manage contacts
+- **Contacts** — Search and manage contacts with auto-permission handling
+- **App launch** — Launch any installed app by name via AI
 - **Python skills** — Create, edit, and run Python scripts via LLM generation
 - **News Digest** — RSS aggregation from major feeds
 - **YouTube Watcher** — Video transcript analysis
@@ -42,6 +45,7 @@
 - **Proactive mode** — Battery monitoring, calendar reminders, smart notification analysis
 - **Notification listener** — Real-time notification processing with importance scoring
 - **Context engine** — Circular buffer of recent events fed to AI for contextual awareness
+- **Notification system status** — Always included in AI context: listener active, proactive mode, forward-to-chat, buffer size
 
 ### 💾 Memory System
 - **Long-term memory** — Persistent storage of facts with confidence scoring
@@ -54,6 +58,9 @@
 - **Appearance customization** — Material You dynamic colors, light/dark/system themes
 - **Multi-language UI** — Russian and English interface with instant switching
 - **Permissions onboarding** — First-launch wizard for 12 key permissions with "Grant All" button and system settings redirect for Notification Listener
+- **Permissions in settings** — Full permissions management accessible from Settings menu for re-granting or revoking permissions after first launch
+- **Scheduler tasks UI** — Browse, manage, and delete scheduled tasks from settings
+- **Log Terminal** — In-app ring buffer log viewer for debugging
 - **Built-in hint system** — Contextual tooltips explaining settings and features
 
 ---
@@ -76,7 +83,7 @@ You can download the latest debug APK directly:
 
 | File | Size | Android | Build |
 |------|------|---------|-------|
-| [`PAi_Android-debug.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v1.0.0-alpha/PAi_Android-debug.apk) | ~85 MB | 14+ (API 24) | Debug |
+| [`PAi_Android-debug.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v1.0.0-alpha/PAi_Android-debug.apk) | ~161 MB | 14+ (API 24) | Debug |
 
 > ⚠️ This is a **debug build** — requires `Install from unknown apps` permission.
 > For a release build, clone the repo and run `./gradlew assembleRelease`.
@@ -139,6 +146,13 @@ The app supports multiple AI backends. API keys are stored locally and never sen
 | OpenAI | `gpt-3.5-turbo` | ✅ | [platform.openai.com](https://platform.openai.com) |
 | OpenRouter | `openrouter/free` | ✅ | [openrouter.ai](https://openrouter.ai) |
 | Ollama | `llama2` | ❌ | Runs locally on device/network |
+| Local AI | `llama.cpp`, `gemma`, `qwen` | ❌ | On-device inference via mlc-llm or exec |
+
+Smart Router can be configured in **Settings → Smart Router**:
+- Toggle hybrid mode on/off
+- Set complexity threshold for cloud routing
+- Configure fallback to local model on network errors
+- Multimodal queries can be routed to local models
 
 ### Skills
 External skills can be installed from the built-in Skill Store. Skills are fetched from a remote manifest and executed on-device.

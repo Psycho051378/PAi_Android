@@ -52,9 +52,8 @@ log.txt
 temp_log.txt
 tmp_log.txt
 
+# APK builds — too large for GitHub, serve via releases
 apk/
-!apk/
-!apk/*.apk
 
 # Local plans / drafts
 PLAN_LOCAL_MODELS.md
