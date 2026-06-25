@@ -99,6 +99,7 @@ class ChatDetailViewModel @Inject constructor(
     private val attachmentRepository: AttachmentRepository,
     private val memoryRepository: MemoryRepository,
     private val summaryRepository: SummaryRepository,
+    private val smartRouterRepository: com.pai.android.data.repository.SmartRouterRepository,
     private val messageProcessor: MessageProcessor,
     private val decisionEngine: DecisionEngine
 ) : ViewModel() {
@@ -121,6 +122,8 @@ class ChatDetailViewModel @Inject constructor(
             if (savedStatus != null) {
                 _state.update { it.copy(isSending = true, workStatus = savedStatus) }
             }
+            // Синхронизируем UI-метаданные (Smart Router, модель) с DecisionEngine
+            refreshUiMeta()
             // Проверяем отложенные уведомления от планировщика (фоновые задачи)
             deliverPendingNotification()
             // Наблюдаем за новыми отложенными уведомлениями в реальном времени
@@ -146,9 +149,13 @@ class ChatDetailViewModel @Inject constructor(
                 // Автоочистка статуса обработки — если processQuery завершился,
                 // processingWorkStatus станет null, кнопка стоп пропадёт
                 val status = com.pai.android.agent.DecisionEngine.processingWorkStatus
+                val modelName = com.pai.android.agent.DecisionEngine.processingModelName
+                val routerEnabled = com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled
                 _state.update { it.copy(
                     isSending = status != null,
-                    workStatus = status ?: ""
+                    workStatus = status ?: "",
+                    activeModelName = modelName ?: "",
+                    smartRouterEnabled = routerEnabled
                 ) }
             }
         }
@@ -521,6 +528,26 @@ class ChatDetailViewModel @Inject constructor(
                 activeModelName = com.pai.android.agent.DecisionEngine.processingModelName ?: "",
                 smartRouterEnabled = com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled
             )
+        }
+    }
+
+    /**
+     * Обновляет UI-метаданные (имя модели, статус Smart Router) из текущего состояния системы.
+     */
+    private fun refreshUiMeta() {
+        viewModelScope.launch {
+            try {
+                val config = smartRouterRepository.get()
+                com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled = config.enabled
+            } catch (e: Exception) {
+                println("⚠️ refreshUiMeta: ${e.message}")
+            }
+            _state.update {
+                it.copy(
+                    activeModelName = com.pai.android.agent.DecisionEngine.processingModelName ?: "",
+                    smartRouterEnabled = com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled
+                )
+            }
         }
     }
 
