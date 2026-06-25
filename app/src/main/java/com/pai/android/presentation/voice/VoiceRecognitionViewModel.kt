@@ -1,5 +1,7 @@
 package com.pai.android.presentation.voice
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pai.android.data.service.VoiceRecognitionService
@@ -26,6 +28,24 @@ class VoiceRecognitionViewModel @Inject constructor(
     
     private val _state = MutableStateFlow(VoiceRecognitionState())
     val state: StateFlow<VoiceRecognitionState> = _state.asStateFlow()
+
+    private val toneGenerator: ToneGenerator by lazy {
+        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70)
+    }
+
+    /** Воспроизводит звуковой сигнал начала прослушивания */
+    private fun playStartTone() {
+        try {
+            toneGenerator.startTone(ToneGenerator.TONE_PROP_PROMPT, 200)
+        } catch (_: Exception) { }
+    }
+
+    /** Воспроизводит звуковой сигнал окончания прослушивания */
+    private fun playStopTone() {
+        try {
+            toneGenerator.startTone(ToneGenerator.TONE_PROP_NACK, 200)
+        } catch (_: Exception) { }
+    }
     
     /**
      * Начинает прослушивание микрофона и распознавание речи.
@@ -40,6 +60,7 @@ class VoiceRecognitionViewModel @Inject constructor(
                 .onEach { result ->
                     when (result) {
                         is RecognitionResult.Ready -> {
+                            playStartTone()
                             _state.update { it.copy(status = "Готов к приёму речи...") }
                         }
                         is RecognitionResult.SpeechStarted -> {
@@ -50,6 +71,7 @@ class VoiceRecognitionViewModel @Inject constructor(
                             _state.update { it.copy(rmsValue = result.rmsdB) }
                         }
                         is RecognitionResult.SpeechEnded -> {
+                            playStopTone()
                             _state.update { it.copy(status = "Речь завершена, обрабатываю...") }
                         }
                         is RecognitionResult.PartialResult -> {
@@ -59,6 +81,7 @@ class VoiceRecognitionViewModel @Inject constructor(
                             ) }
                         }
                         is RecognitionResult.Success -> {
+                            playStopTone()
                             _state.update { it.copy(
                                 recognizedText = result.text,
                                 partialText = "",
@@ -67,6 +90,7 @@ class VoiceRecognitionViewModel @Inject constructor(
                             ) }
                         }
                         is RecognitionResult.Error -> {
+                            playStopTone()
                             _state.update { it.copy(
                                 error = result.message,
                                 isListening = false,
@@ -131,6 +155,7 @@ class VoiceRecognitionViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         voiceRecognitionService.destroy()
+        try { toneGenerator.release() } catch (_: Exception) { }
     }
 }
 

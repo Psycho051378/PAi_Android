@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.IBinder
 import android.speech.RecognitionListener
@@ -89,6 +91,18 @@ class WakeWordService : Service() {
      */
     private var currentProcessJob: Job? = null
 
+    private val toneGenerator: ToneGenerator by lazy {
+        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70)
+    }
+
+    private fun playStartTone() {
+        try { toneGenerator.startTone(ToneGenerator.TONE_PROP_PROMPT, 200) } catch (_: Exception) { }
+    }
+
+    private fun playStopTone() {
+        try { toneGenerator.startTone(ToneGenerator.TONE_PROP_NACK, 200) } catch (_: Exception) { }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> startWakeWordDetection()
@@ -122,6 +136,7 @@ class WakeWordService : Service() {
         speechRecognizer = null
         textToSpeech?.shutdown()
         scope.cancel()
+        try { toneGenerator.release() } catch (_: Exception) { }
         Log.i(TAG, "WakeWordService destroyed")
         super.onDestroy()
     }
@@ -208,6 +223,7 @@ class WakeWordService : Service() {
             speechRecognizer?.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
                     Log.d(TAG, "SpeechRecognizer ready")
+                    playStartTone()
                     updateNotification("🎧 Слушаю...")
                 }
                 override fun onBeginningOfSpeech() {
@@ -216,6 +232,7 @@ class WakeWordService : Service() {
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {
+                    playStopTone()
                     updateNotification("⏳ Обрабатываю...")
                 }
                 override fun onError(error: Int) {
@@ -226,6 +243,7 @@ class WakeWordService : Service() {
                         SpeechRecognizer.ERROR_CLIENT -> "client"
                         else -> "code $error"
                     }
+                    playStopTone()
                     Log.w(TAG, "SpeechRecognizer error: $msg")
                     speechRecognizer?.destroy()
                     speechRecognizer = null
@@ -233,6 +251,7 @@ class WakeWordService : Service() {
                     scope.launch { delay(2000); resumeWakeWord() }
                 }
                 override fun onResults(results: Bundle?) {
+                    playStopTone()
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                     if (text != null) {

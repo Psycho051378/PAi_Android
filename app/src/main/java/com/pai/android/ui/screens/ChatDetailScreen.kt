@@ -927,19 +927,34 @@ fun MessageItemWithActions(
                     )
                 }
                 
-                // Время сообщения
+                // Время + модель сообщения
                 if (attachments.isNotEmpty()) {
                     attachments.forEach { att ->
                         AttachmentRow(attachment = att)
                     }
                 }
-                Text(
-                    text = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
-                        .format(java.util.Date(message.timestamp)),
-                    fontSize = 10.sp,
-                    color = Color.LightGray,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = if (isUser) Arrangement.Start else Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(message.timestamp)),
+                        fontSize = 10.sp,
+                        color = Color.LightGray
+                    )
+                    if (!isUser && !message.providerModel.isNullOrBlank()) {
+                        Text(
+                            text = message.providerModel,
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -1019,13 +1034,28 @@ fun MessageItem(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                Text(
-                    text = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
-                        .format(java.util.Date(message.timestamp)),
-                    fontSize = 10.sp,
-                    color = Color.LightGray,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = if (isUser) Arrangement.Start else Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(message.timestamp)),
+                        fontSize = 10.sp,
+                        color = Color.LightGray
+                    )
+                    if (!isUser && !message.providerModel.isNullOrBlank()) {
+                        Text(
+                            text = message.providerModel,
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

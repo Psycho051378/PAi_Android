@@ -1470,7 +1470,8 @@ class ChatDetailViewModel @Inject constructor(
                     val finalAnswer = if (pendingBg != null) pendingBg + "\n\n---\n\n" + response.answer else response.answer
                     val aiMessage = Message.createAssistantMessage(
                         chatId = chatId,
-                        content = finalAnswer
+                        content = finalAnswer,
+                        providerModel = com.pai.android.agent.DecisionEngine.processingModelName
                     )
                     chatRepository.addMessage(aiMessage)
                     // Save agent-generated file attachments
