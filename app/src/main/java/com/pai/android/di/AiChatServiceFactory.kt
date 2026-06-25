@@ -23,6 +23,11 @@ class AiChatServiceFactory @Inject constructor() {
         val baseUrl = settings.getEffectiveBaseUrl()
         val apiKey = settings.apiKey
         
+        // LITE_RT: локальная модель — не HTTP-провайдер
+        if (settings.provider == com.pai.android.data.model.AiProvider.LITE_RT) {
+            throw LocalModelNotReadyException()
+        }
+        
         // Создаём HTTP клиент с заголовками авторизации
         val clientBuilder = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -109,7 +114,10 @@ class AiChatServiceFactory @Inject constructor() {
                 
                 AiProvider.OLLAMA -> {
                     // Ollama не требует авторизации
-                    // Может потребоваться другие заголовки
+                }
+                
+                AiProvider.LITE_RT -> {
+                    // Локальная модель — без авторизации
                 }
                 
                 AiProvider.CUSTOM -> {
@@ -127,3 +135,5 @@ class AiChatServiceFactory @Inject constructor() {
         }
     }
 }
+
+class LocalModelNotReadyException(message: String = "Локальная модель ещё не интегрирована с AI-агентом") : Exception(message)

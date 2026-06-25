@@ -1,5 +1,6 @@
 package com.pai.android.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,9 +25,12 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsApplications
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -35,7 +39,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -71,6 +77,7 @@ import com.pai.android.ui.utils.pressAnimation
 import com.pai.android.ui.utils.toggleSlideAnimation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.pai.android.data.local.model.ModelManager
 import com.pai.android.data.model.AiProvider
 import com.pai.android.data.model.ProviderSettings
 import com.pai.android.presentation.settings.ProviderSettingsViewModel
@@ -137,10 +144,20 @@ fun ProviderSettingsScreen(
                 state.editingSettings != null -> {
                     EditProviderSettingsScreen(
                         settings = state.editingSettings,
-                        onSave = { provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP ->
-                            viewModel.saveSettings(provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP)
+                        compatibilityResult = state.compatibilityResult,
+                        isCheckingCompatibility = state.isCheckingCompatibility,
+                        downloadProgress = state.downloadProgress,
+                        isDownloading = state.isDownloading,
+                        isDownloaded = state.isDownloaded,
+                        downloadError = state.downloadError,
+                        onSave = { provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend ->
+                            viewModel.saveSettings(provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend)
                         },
-                        onCancel = { viewModel.cancelEditing() }
+                        onCancel = { viewModel.cancelEditing() },
+                        onCheckCompatibility = { modelId -> viewModel.checkCompatibility(modelId) },
+                        onCheckIfDownloaded = { modelId -> viewModel.checkIfModelDownloaded(modelId) },
+                        onDownloadModel = { modelId -> viewModel.downloadModel(modelId) },
+                    onDeleteModel = { modelId -> viewModel.deleteModel(modelId) }
                     )
                 }
                 state.providers.isEmpty() -> {
@@ -170,6 +187,10 @@ fun ProviderSettingsScreen(
                                 )
                             }
                         }
+                        // Smart Router — навигация
+                        item {
+                            SmartRouterNavCard(navController = navController)
+                        }
                     }
                 }
             }
@@ -195,7 +216,7 @@ fun ProviderSection(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = provider.displayName,
+                text = provider.localizedName(),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -294,7 +315,7 @@ fun ProviderSettingItem(
             
             if (!setting.apiKey.isNullOrBlank()) {
                 Text(
-                    text = "API ключ: ${"*".repeat(8)}${setting.apiKey.takeLast(4)}",
+                    text = "${stringResource(R.string.provider_api_key_label)}: ${"*".repeat(8)}${setting.apiKey.takeLast(4)}",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -302,7 +323,7 @@ fun ProviderSettingItem(
             
             if (!setting.baseUrl.isNullOrBlank() && setting.baseUrl != setting.provider.defaultBaseUrl) {
                 Text(
-                    text = "URL: ${setting.baseUrl}",
+                    text = "${stringResource(R.string.provider_url_label)}: ${setting.baseUrl}",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -340,6 +361,12 @@ fun ProviderSettingItem(
 @Composable
 fun EditProviderSettingsScreen(
     settings: com.pai.android.data.model.ProviderSettings?,
+    compatibilityResult: com.pai.android.data.local.model.CompatibilityResult? = null,
+    isCheckingCompatibility: Boolean = false,
+    downloadProgress: Float = 0f,
+    isDownloading: Boolean = false,
+    isDownloaded: Boolean = false,
+    downloadError: String? = null,
     onSave: (
         provider: com.pai.android.data.model.AiProvider,
         apiKey: String?,
@@ -354,9 +381,14 @@ fun EditProviderSettingsScreen(
         contextBufferPercent: Int,
         useCustomParams: Boolean,
         temperature: Double?,
-        topP: Double?
+        topP: Double?,
+        useGpuBackend: Boolean
     ) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onCheckCompatibility: (String) -> Unit = {},
+    onCheckIfDownloaded: (String) -> Unit = {},
+    onDownloadModel: (String) -> Unit = {},
+    onDeleteModel: (String) -> Unit = {}
 ) {
     var selectedProvider by remember { mutableStateOf(settings?.provider ?: com.pai.android.data.model.AiProvider.OPENROUTER) }
     var apiKey by remember { mutableStateOf(settings?.apiKey ?: "") }
@@ -375,6 +407,7 @@ fun EditProviderSettingsScreen(
     var useCustomParams by remember { mutableStateOf(settings?.useCustomParams ?: false) }
     var temperatureValue by remember { mutableStateOf(settings?.temperature?.toFloat() ?: 0.7f) }
     var topPValue by remember { mutableStateOf(settings?.topP?.toFloat() ?: 1.0f) }
+    var useGpuBackend by remember { mutableStateOf(settings?.useGpuBackend ?: true) }
     
     val scrollState = rememberScrollState()
     Column(modifier = Modifier.padding(16.dp).verticalScroll(scrollState)) {
@@ -396,56 +429,170 @@ fun EditProviderSettingsScreen(
                     onClick = { selectedProvider = provider }
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
-                        Text(provider.displayName, fontWeight = FontWeight.Medium)
+                        Text(provider.localizedName(), fontWeight = FontWeight.Medium)
                         Text(provider.defaultBaseUrl, fontSize = 12.sp, color = Color.Gray)
                     }
                 }
             }
         }
         
-        val apiKeyInteractionSource = remember { MutableInteractionSource() }
-        OutlinedTextField(
-            value = apiKey,
-            onValueChange = { apiKey = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .focusAnimation(apiKeyInteractionSource),
-            label = { HintText(
-                text = stringResource(R.string.provider_api_key_label),
-                hintResId = when (selectedProvider) {
-                    com.pai.android.data.model.AiProvider.DEEPSEEK -> R.string.hint_provider_api_key_deepseek
-                    com.pai.android.data.model.AiProvider.OPENAI -> R.string.hint_provider_api_key_openai
-                    else -> R.string.hint_provider_api_key
+        // ══ LITE_RT: адаптированный UI ══
+        val isLiteRt = selectedProvider == com.pai.android.data.model.AiProvider.LITE_RT
+        
+        if (!isLiteRt) {
+            val apiKeyInteractionSource = remember { MutableInteractionSource() }
+            OutlinedTextField(
+                value = apiKey,
+                onValueChange = { apiKey = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .focusAnimation(apiKeyInteractionSource),
+                label = { HintText(
+                    text = stringResource(R.string.provider_api_key_label),
+                    hintResId = when (selectedProvider) {
+                        com.pai.android.data.model.AiProvider.DEEPSEEK -> R.string.hint_provider_api_key_deepseek
+                        com.pai.android.data.model.AiProvider.OPENAI -> R.string.hint_provider_api_key_openai
+                        else -> R.string.hint_provider_api_key
+                    }
+                ) },
+                interactionSource = apiKeyInteractionSource,
+                visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showApiKey = !showApiKey }) {
+                        Icon(
+                            if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showApiKey) stringResource(R.string.provider_hide_key) else stringResource(R.string.provider_show_key)
+                        )
+                    }
                 }
-            ) },
-            interactionSource = apiKeyInteractionSource,
-            visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton(onClick = { showApiKey = !showApiKey }) {
-                    Icon(
-                        if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (showApiKey) stringResource(R.string.provider_hide_key) else stringResource(R.string.provider_show_key)
-                    )
+            )
+            
+            val baseUrlInteractionSource = remember { MutableInteractionSource() }
+            OutlinedTextField(
+                value = baseUrl,
+                onValueChange = { baseUrl = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .focusAnimation(baseUrlInteractionSource),
+                label = { HintText(
+                    text = stringResource(R.string.provider_base_url_label),
+                    hintResId = R.string.hint_provider_base_url
+                ) },
+                interactionSource = baseUrlInteractionSource,
+                placeholder = { Text(selectedProvider.defaultBaseUrl) }
+            )
+        } else {
+            // LITE_RT: выбор модели + совместимость + скачивание
+            Text(stringResource(R.string.provider_local_model_title), fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Text(stringResource(R.string.provider_local_model_desc), fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+            
+            Text(stringResource(R.string.provider_local_model_select), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
+            com.pai.android.data.local.model.LocalModelInfo.AVAILABLE_MODELS.forEach { model ->
+                val isSelected = modelName == model.id
+                Card(modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth().clickable {
+                    modelName = model.id
+                    onCheckIfDownloaded(model.id)
+                },
+                    colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface)) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(model.displayName, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.provider_local_model_size, model.sizeMb) + " · " + stringResource(R.string.provider_local_model_ram, model.minRamMb), fontSize = 12.sp, color = Color.Gray)
+                        }
+                        if (isSelected && isDownloaded) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            IconButton(onClick = { onDeleteModel(model.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.provider_local_model_delete),
+                                    tint = Color(0xFFFF5252)
+                                )
+                            }
+                        }
+                        if (isSelected && !isDownloaded && !isDownloading) {
+                            IconButton(onClick = { onDownloadModel(model.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.provider_download_model),
+                                    tint = Color(0xFF2196F3)
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        )
-        
-        val baseUrlInteractionSource = remember { MutableInteractionSource() }
-        OutlinedTextField(
-            value = baseUrl,
-            onValueChange = { baseUrl = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .focusAnimation(baseUrlInteractionSource),
-            label = { HintText(
-                text = stringResource(R.string.provider_base_url_label),
-                hintResId = R.string.hint_provider_base_url
-            ) },
-            interactionSource = baseUrlInteractionSource,
-            placeholder = { Text(selectedProvider.defaultBaseUrl) }
-        )
+            
+            OutlinedButton(onClick = { onCheckCompatibility(modelName) }, enabled = !isCheckingCompatibility && modelName.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text(if (isCheckingCompatibility) stringResource(R.string.provider_local_model_checking) else stringResource(R.string.provider_local_model_check))
+            }
+            
+            compatibilityResult?.let { result ->
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (result.compatible) Color(0xFF1B5E20) else Color(0xFFB71C1C))) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(if (result.compatible) stringResource(R.string.provider_local_model_compatible) else stringResource(R.string.provider_local_model_incompatible), fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(result.details, fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+
+            // Переключатель GPU/CPU для локальной модели
+            Text(stringResource(R.string.provider_accelerator_title), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.provider_use_gpu), modifier = Modifier.weight(1f))
+                Switch(
+                    checked = useGpuBackend,
+                    onCheckedChange = { useGpuBackend = it }
+                )
+            }
+            Text(
+                text = if (useGpuBackend) stringResource(R.string.provider_gpu_desc) else stringResource(R.string.provider_cpu_desc),
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            if (isDownloaded) {
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(stringResource(R.string.provider_local_model_downloaded), fontWeight = FontWeight.Bold, color = Color.White)
+                        OutlinedButton(
+                            onClick = { onDeleteModel(modelName) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        ) {
+                            Text(stringResource(R.string.provider_local_model_delete), color = Color(0xFFFF5252))
+                        }
+                    }
+                }
+            } else if (isDownloading) {
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF37474F))) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("⏬ Скачивание...", fontWeight = FontWeight.Bold, color = Color.White)
+                        LinearProgressIndicator(progress = downloadProgress, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        Text("${(downloadProgress * 100).toInt()}%", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            } else if (compatibilityResult?.compatible == true) {
+                OutlinedButton(onClick = { onDownloadModel(modelName) }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Text("📥 Скачать модель")
+                }
+            }
+            
+            downloadError?.let {
+                Text("❌ $it", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+            }
+        }
         
         val modelNameInteractionSource = remember { MutableInteractionSource() }
         OutlinedTextField(
@@ -531,7 +678,7 @@ fun EditProviderSettingsScreen(
                 .focusAnimation(modelMaxCtxInteractionSource),
             label = { Text(stringResource(R.string.provider_context_window_label)) },
             interactionSource = modelMaxCtxInteractionSource,
-            placeholder = { Text("Напр. 1000000") },
+            placeholder = { Text(stringResource(R.string.provider_model_max_context_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true
         )
@@ -546,7 +693,7 @@ fun EditProviderSettingsScreen(
                 .focusAnimation(modelMaxOutInteractionSource),
             label = { Text(stringResource(R.string.provider_max_output_label)) },
             interactionSource = modelMaxOutInteractionSource,
-            placeholder = { Text("Напр. 384000") },
+            placeholder = { Text(stringResource(R.string.provider_model_max_output_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true
         )
@@ -648,7 +795,8 @@ fun EditProviderSettingsScreen(
                         contextBufferText.toIntOrNull() ?: 90,
                         useCustomParams,
                         temperatureValue.toDouble(),
-                        topPValue.toDouble()
+                        topPValue.toDouble(),
+                        useGpuBackend
                     )
                 },
                 modifier = Modifier.weight(1f)
@@ -657,6 +805,69 @@ fun EditProviderSettingsScreen(
             }
         }
     }
+}
+
+/**
+ * Карточка Smart Router в списке провайдеров.
+ */
+@Composable
+private fun SmartRouterNavCard(navController: NavController?) {
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .fillMaxWidth()
+            .clickable {
+                if (navController != null) {
+                    navController.navigate(Screen.SmartRouterSettings.route)
+                }
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.SmartToy,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_smart_router),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = stringResource(R.string.settings_smart_router_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+    }
+}
+
+/** Локализованное название провайдера */
+@Composable
+fun AiProvider.localizedName(): String = when (this) {
+    com.pai.android.data.model.AiProvider.LITE_RT -> stringResource(R.string.provider_name_lite_rt)
+    com.pai.android.data.model.AiProvider.CUSTOM -> stringResource(R.string.provider_name_custom)
+    com.pai.android.data.model.AiProvider.OPENROUTER -> stringResource(R.string.provider_name_openrouter)
+    com.pai.android.data.model.AiProvider.DEEPSEEK -> stringResource(R.string.provider_name_deepseek)
+    com.pai.android.data.model.AiProvider.OPENAI -> stringResource(R.string.provider_name_openai)
+    com.pai.android.data.model.AiProvider.OLLAMA -> stringResource(R.string.provider_name_ollama)
 }
 
 @Preview(showBackground = true)

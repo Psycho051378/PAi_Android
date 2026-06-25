@@ -24,6 +24,7 @@ import com.pai.android.ui.screens.VoiceSettingsScreen
 import com.pai.android.ui.screens.RouterSettingsScreen
 import com.pai.android.ui.screens.WebSearchSettingsScreen
 import com.pai.android.ui.screens.ProactiveSettingsScreen
+import com.pai.android.ui.screens.SmartRouterSettingsScreen
 import androidx.navigation.NavGraphBuilder
 import com.google.accompanist.navigation.animation.navigation
 
@@ -88,7 +89,9 @@ sealed class Screen(val route: String) {
     object SkillStore : Screen("skill_store")
     object VoiceSettings : Screen("voice_settings")
     object RouterSettings : Screen("router_settings")
+    object SmartRouterSettings : Screen("smart_router_settings")
     object Permissions : Screen("permissions")
+    object PermissionsSettings : Screen("permissions_settings")
 
 }
 
@@ -261,6 +264,16 @@ fun PaiNavigation(
         }
 
         composable(
+            route = Screen.SmartRouterSettings.route,
+            enterTransition = { NavigationAnimations.slideInHorizontalAnim },
+            exitTransition = { NavigationAnimations.slideOutHorizontalAnim },
+            popEnterTransition = { NavigationAnimations.slideInHorizontalReverseAnim },
+            popExitTransition = { NavigationAnimations.slideOutHorizontalReverseAnim }
+        ) {
+            SmartRouterSettingsScreen(navController = navController)
+        }
+
+        composable(
             route = Screen.VoiceSettings.route,
             enterTransition = { NavigationAnimations.fadeInAnim },
             exitTransition = { NavigationAnimations.fadeOutAnim },
@@ -272,7 +285,7 @@ fun PaiNavigation(
             )
         }
 
-        // Экран разрешений (онбординг) — без анимации возврата
+        // Экран разрешений (онбординг при первом запуске) — без анимации возврата
         composable(
             route = Screen.Permissions.route,
             enterTransition = { null },
@@ -291,6 +304,20 @@ fun PaiNavigation(
                         popUpTo(Screen.Permissions.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // Экран разрешений из меню настроек — возвращает назад
+        composable(
+            route = Screen.PermissionsSettings.route,
+            enterTransition = { NavigationAnimations.slideInHorizontalAnim },
+            exitTransition = { NavigationAnimations.slideOutHorizontalAnim },
+            popEnterTransition = { NavigationAnimations.slideInHorizontalReverseAnim },
+            popExitTransition = { NavigationAnimations.slideOutHorizontalReverseAnim }
+        ) {
+            PermissionsScreen(
+                onComplete = { navController.popBackStack() },
+                onSkip = { navController.popBackStack() }
             )
         }
 

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsApplications
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DevicesOther
 import androidx.compose.material.icons.filled.Notifications
 
 import androidx.compose.material.icons.filled.Storage
@@ -85,6 +86,14 @@ fun SettingsScreen(
 ) {
     // Список всех разделов настроек
     val settingsItems = listOf(
+        SettingsItem(
+            id = "permissions",
+            title = stringResource(R.string.settings_permissions),
+            description = stringResource(R.string.settings_permissions_desc),
+            icon = Icons.Default.Security,
+            route = Screen.PermissionsSettings.route,
+            color = Color(0xFFE91E63)
+        ),
         SettingsItem(
             id = "ai_providers",
             title = stringResource(R.string.settings_ai_providers),
@@ -253,6 +262,7 @@ fun SettingsScreen(
                                 Screen.RoleList.route,
                                 Screen.WebSearchSettings.route,
                                 Screen.AppearanceSettings.route,
+                                Screen.PermissionsSettings.route,
                                 Screen.ProactiveSettings.route,
                                 Screen.MemoryManagement.route,
                                 Screen.SchedulerTasks.route,

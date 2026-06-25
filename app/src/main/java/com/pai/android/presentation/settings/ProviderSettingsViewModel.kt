@@ -2,6 +2,9 @@ package com.pai.android.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pai.android.data.local.model.CompatibilityResult
+import com.pai.android.data.local.model.LocalModelInfo
+import com.pai.android.data.local.model.ModelManager
 import com.pai.android.data.model.AiProvider
 import com.pai.android.data.model.ProviderSettings
 import com.pai.android.data.repository.ProviderSettingsRepository
@@ -23,7 +26,14 @@ data class ProviderSettingsState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val selectedProvider: AiProvider? = null,
-    val editingSettings: ProviderSettings? = null
+    val editingSettings: ProviderSettings? = null,
+    // LITE_RT
+    val compatibilityResult: CompatibilityResult? = null,
+    val isCheckingCompatibility: Boolean = false,
+    val downloadProgress: Float = 0f,
+    val isDownloading: Boolean = false,
+    val isDownloaded: Boolean = false,
+    val downloadError: String? = null
 )
 
 /**
@@ -31,7 +41,8 @@ data class ProviderSettingsState(
  */
 @HiltViewModel
 class ProviderSettingsViewModel @Inject constructor(
-    private val settingsRepository: ProviderSettingsRepository
+    private val settingsRepository: ProviderSettingsRepository,
+    private val modelManager: ModelManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProviderSettingsState())
@@ -117,7 +128,8 @@ class ProviderSettingsViewModel @Inject constructor(
         contextBufferPercent: Int = 90,
         useCustomParams: Boolean = false,
         temperature: Double? = null,
-        topP: Double? = null
+        topP: Double? = null,
+        useGpuBackend: Boolean = true
     ) {
         viewModelScope.launch {
             try {
@@ -136,6 +148,7 @@ class ProviderSettingsViewModel @Inject constructor(
                     useCustomParams = useCustomParams,
                     temperature = temperature,
                     topP = topP,
+                    useGpuBackend = useGpuBackend,
                     updatedAt = System.currentTimeMillis()
                 ) ?: ProviderSettings(
                     provider = provider,
@@ -234,5 +247,43 @@ class ProviderSettingsViewModel @Inject constructor(
      */
     fun clearError() {
         _state.update { it.copy(errorMessage = null) }
+    }
+    
+    // ═══ LITE_RT ═══
+    
+    fun checkCompatibility(modelId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isCheckingCompatibility = true, compatibilityResult = null) }
+            val modelInfo = LocalModelInfo.fromId(modelId) ?: return@launch
+            val result = modelManager.checkCompatibility(modelInfo)
+            _state.update { it.copy(compatibilityResult = result, isCheckingCompatibility = false) }
+        }
+    }
+    
+    fun checkIfModelDownloaded(modelId: String) {
+        _state.update { it.copy(isDownloaded = modelManager.isModelDownloaded(modelId)) }
+    }
+    
+    fun downloadModel(modelId: String) {
+        viewModelScope.launch {
+            val modelInfo = LocalModelInfo.fromId(modelId) ?: return@launch
+            _state.update { it.copy(isDownloading = true, downloadProgress = 0f, downloadError = null) }
+            try {
+                val result = modelManager.downloadModel(modelInfo) { progress ->
+                    _state.update { it.copy(downloadProgress = progress) }
+                }
+                result.fold(
+                    onSuccess = { _state.update { it.copy(isDownloading = false, downloadProgress = 1f, isDownloaded = true) } },
+                    onFailure = { e -> _state.update { it.copy(isDownloading = false, downloadError = e.message) } }
+                )
+            } catch (e: Exception) {
+                _state.update { it.copy(isDownloading = false, downloadError = e.message) }
+            }
+        }
+    }
+    
+    fun deleteModel(modelId: String) {
+        modelManager.deleteModel(modelId)
+        _state.update { it.copy(isDownloaded = false, downloadProgress = 0f) }
     }
 }

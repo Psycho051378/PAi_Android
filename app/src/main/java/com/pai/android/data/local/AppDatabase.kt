@@ -34,7 +34,7 @@ import com.pai.android.data.model.GeoTask
         QueryAnalysisResult::class,
         GeoTask::class
     ],
-    version = 19,
+    version = 21,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -446,5 +446,27 @@ private val MIGRATION_18_19 = object : Migration(18, 19) {
             )
         """)
         println("✅ MIGRATION_18_19: Таблица geo_tasks создана")
+    }
+}
+
+// Миграция с версии 19 на 20: добавление полей локальных моделей в provider_settings
+internal val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        println("🔄 MIGRATION_19_20: Добавляем поля локальных моделей в provider_settings")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN local_model_enabled INTEGER NOT NULL DEFAULT 0")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN local_model_name TEXT NOT NULL DEFAULT ''")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN local_model_downloaded INTEGER NOT NULL DEFAULT 0")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN local_model_ready INTEGER NOT NULL DEFAULT 0")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN router_mode TEXT NOT NULL DEFAULT 'SIMPLE_LOCAL'")
+        println("✅ MIGRATION_19_20: Поля локальных моделей добавлены")
+    }
+}
+
+// Миграция 20 → 21: Добавляем поле use_gpu_backend
+internal val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        println("🔨 MIGRATION_20_21: Добавляем поле use_gpu_backend в provider_settings")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN use_gpu_backend INTEGER NOT NULL DEFAULT 1")
+        println("✅ MIGRATION_20_21: Поле use_gpu_backend добавлено (по умолчанию GPU)")
     }
 }

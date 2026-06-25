@@ -62,7 +62,9 @@ class AgentPlanner @Inject constructor(
             "maps" to "maps & navigation: geocode (address to coordinates), reverse_geocode (coords to address), places_search (find POIs near location - fuel, cafe, atm, restaurant, pharmacy, hospital, supermarket, parking, hotel, school), route (driving directions with distance and time), maps_open (open location in Google Maps or Yandex Maps app)",
             "memory" to "save and search facts in permanent memory. Use save_fact to store user info (name, address, phone, preferences). Use search_facts to look up saved info",
             "home" to "control smart home devices (router, lights, etc.)",
-            "ai_chat" to "direct AI answer without tools"
+            "ai_chat" to "direct AI answer without tools",
+            "notif_listener" to "check if Android notification listener is active, check listener status, or open Android notification access settings. Use for 'status of notifications', 'notification access', 'notification listener' queries",
+            "get_context" to "get full device context snapshot: current time, location, battery level, notification buffer status, proactive settings, active tasks"
         )
     }
 
@@ -184,7 +186,7 @@ RULES:
 19. For maps: action=geocode (query=address), action=reverse_geocode (lat, lon), action=places_search (lat, lon, type=fuel|cafe|atm|restaurant|pharmacy|hospital|supermarket|parking|hotel|school, radius=1000, limit=5), action=route (from_lat, from_lon, to_lat, to_lon), action=maps_open (lat, lon [or to_lat, to_lon])
 20. For route building: ALWAYS call location(current) first for current coords, then maps(geocode) for destination if needed, then maps(route), then maps(maps_open) to show on actual map app. DO NOT generate verbal walking/driving directions from AI knowledge — use maps tools.
 21. Results from previous steps are available as {variable_name} in params of following steps
-22. For memory: command=save_fact to store info (category=locations for addresses, category=personal_info for name/birth/profession, category=contacts for phone/email, category=preferences for likes/hobbies). Scope is determined automatically by category — do NOT pass scope/confidence params. Also: command=search_facts to look up saved facts, command=get_fact to get specific fact by category+key
+22. For memory: command=save_fact to store info (category=locations for addresses, category=personal_info for name/birth/profession, category=contacts for phone/email, category=preferences for likes/hobbies, category=ai_info for assistant info like its name and role). Scope is determined automatically by category — do NOT pass scope/confidence params. Also: command=search_facts to look up saved facts, command=get_fact to get specific fact by category+key
 23. When user says "запомни", "сохрани", "remember", "save my", "my address is", "my phone is" — use memory.save_fact. Do NOT use file_system.write_file for personal info — use memory instead
 24. When saving facts to memory, ALWAYS include an ai_chat step AFTER the memory step to format a friendly, personalized response to the user. The ai_chat query should summarize what was saved and respond warmly.
 25. IMPORTANT: For saving preferences/likes (music, series, food, hobbies), the ai_chat step is REQUIRED — the user expects an acknowledgment, not just a raw fact message.

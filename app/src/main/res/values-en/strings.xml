@@ -111,6 +111,33 @@
     <string name="settings_about_desc">Developed by PygmalionAi</string>
     <string name="settings_navigate">Navigate</string>
 
+    <!-- Smart Router -->
+    <string name="settings_smart_router">Smart Router</string>
+    <string name="settings_smart_router_desc">Route requests between local and cloud models</string>
+    <string name="smart_router_title">Smart Router</string>
+    <string name="smart_router_enabled">Enabled</string>
+    <string name="smart_router_disabled">Disabled</string>
+    <string name="smart_router_threshold">Complexity threshold</string>
+    <string name="smart_router_threshold_desc">Lower value = more requests go to cloud</string>
+    <string name="smart_router_max_tokens">Max fallback tokens</string>
+    <string name="smart_router_max_tokens_desc">Requests shorter than this go to local model when cloud is unavailable</string>
+    <string name="smart_router_multimodal">Multimodal → local</string>
+    <string name="smart_router_fallback">Fallback to local on error</string>
+    <string name="smart_router_hybrid">Hybrid mode (experimental)</string>
+    <string name="smart_router_saved">✅ Settings saved</string>
+    <string name="smart_router_save">Save</string>
+    <string name="smart_router_network_model">Network model</string>
+    <string name="smart_router_no_providers">No network providers configured. Add one in AI Settings.</string>
+    <string name="smart_router_model_label">Model:</string>
+    <string name="smart_router_local_model">Local model</string>
+    <string name="smart_router_local_desc">Uses active local model from AI Providers (LiteRT)</string>
+    <string name="smart_router_easier">Simpler</string>
+    <string name="smart_router_harder">Harder</string>
+    <string name="smart_router_current_value">Current value: %d%%</string>
+    <string name="smart_router_extra">Extra</string>
+    <string name="smart_router_desc">Smart Router splits requests: simple/multimodal → local model, complex → network model.</string>
+    <string name="smart_router_auto_select">Auto-select model</string>
+
     <!-- AboutScreen -->
     <string name="about_title">About</string>
     <string name="about_app_name">Pai Android</string>
@@ -537,4 +564,31 @@
     <string name="perm_notification_listener_desc">Listen to notifications from other apps (system setting)</string>
     <string name="perm_manage_storage">Storage Management</string>
     <string name="perm_manage_storage_desc">Full file access (legacy Android versions)</string>
+
+    <!-- Local model (LiteRT) provider settings -->
+    <string name="provider_local_model_title">🧠 Local Model</string>
+    <string name="provider_local_model_desc">No API key required. Works via LiteRT directly.</string>
+    <string name="provider_local_model_select">Select model:</string>
+    <string name="provider_local_model_compatible">✅ Compatible</string>
+    <string name="provider_local_model_incompatible">❌ Incompatible</string>
+    <string name="provider_local_model_downloaded">✅ Model downloaded</string>
+    <string name="provider_local_model_check">🔍 Check compatibility</string>
+    <string name="provider_local_model_checking">Checking…</string>
+    <string name="provider_local_model_delete">Delete model</string>
+    <string name="provider_local_model_size">%d MB</string>
+    <string name="provider_local_model_ram">min %d MB RAM</string>
+    <string name="provider_accelerator_title">Accelerator:</string>
+    <string name="provider_use_gpu">Use GPU</string>
+    <string name="provider_gpu_desc">GPU — faster, higher power consumption</string>
+    <string name="provider_cpu_desc">CPU — slower, lower power consumption</string>
+    <string name="provider_model_max_context_placeholder">E.g. 1000000</string>
+    <string name="provider_model_max_output_placeholder">E.g. 384000</string>
+    <string name="provider_download_model">Download model</string>
+    <string name="provider_name_lite_rt">Local (LiteRT)</string>
+    <string name="provider_name_custom">Other Provider</string>
+    <string name="provider_name_openrouter">OpenRouter</string>
+    <string name="provider_name_deepseek">DeepSeek</string>
+    <string name="provider_name_openai">OpenAI</string>
+    <string name="provider_name_ollama">Ollama</string>
+
 </resources>

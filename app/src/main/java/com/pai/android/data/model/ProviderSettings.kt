@@ -59,10 +59,31 @@ data class ProviderSettings(
     /** Стратегия управления контекстом при превышении лимита: truncate|summarize */
     @ColumnInfo(name = "context_management")
     val contextManagement: String = "truncate",
+
+    // ═══ Локальные модели (LiteRT) ═══
+    
+    @ColumnInfo(name = "local_model_enabled")
+    val localModelEnabled: Boolean = false,
+    
+    @ColumnInfo(name = "local_model_name")
+    val localModelName: String = "",
+    
+    @ColumnInfo(name = "local_model_downloaded")
+    val localModelDownloaded: Boolean = false,
+    
+    @ColumnInfo(name = "local_model_ready")
+    val localModelReady: Boolean = false,
+    
+    @ColumnInfo(name = "router_mode")
+    val routerMode: String = "SIMPLE_LOCAL",
     
     /** Процент буфера от лимита перед срабатыванием тримминга (0-100) */
     @ColumnInfo(name = "context_buffer_percent")
     val contextBufferPercent: Int = 90,
+    
+    /** Использовать GPU для локальной модели вместо CPU */
+    @ColumnInfo(name = "use_gpu_backend")
+    val useGpuBackend: Boolean = true,
     
     val createdAt: Long = System.currentTimeMillis(),
     
@@ -79,6 +100,7 @@ data class ProviderSettings(
             // Дефолтные параметры для новых моделей DeepSeek
             val (maxTokens, modelMaxContext, modelMaxOutput) = when (provider) {
                 AiProvider.DEEPSEEK -> Triple(8192, 1000000, 384000)
+                AiProvider.LITE_RT -> Triple(1024, 8192, 1024)
                 else -> Triple(null, null, null)
             }
             

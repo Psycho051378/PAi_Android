@@ -1,4 +1,4 @@
-﻿package com.pai.android.agent.tools
+package com.pai.android.agent.tools
 
 import com.pai.android.agent.BaseAgentTool
 import com.pai.android.agent.ToolResult
@@ -118,28 +118,28 @@ class WebFetchTool : BaseAgentTool() {
         val contentBlocks = mutableListOf<String>()
 
         // Заголовки
-        extractAll("(?si)<h1[^>]*>(.*?)</h1>", body).forEach { contentBlocks.add("h1|${it.strip()}") }
-        extractAll("(?si)<h2[^>]*>(.*?)</h2>", body).forEach { contentBlocks.add("h2|${it.strip()}") }
-        extractAll("(?si)<h3[^>]*>(.*?)</h3>", body).forEach { contentBlocks.add("h3|${it.strip()}") }
-        extractAll("(?si)<h4[^>]*>(.*?)</h4>", body).forEach { contentBlocks.add("h4|${it.strip()}") }
-        extractAll("(?si)<h5[^>]*>(.*?)</h5>", body).forEach { contentBlocks.add("h5|${it.strip()}") }
-        extractAll("(?si)<h6[^>]*>(.*?)</h6>", body).forEach { contentBlocks.add("h6|${it.strip()}") }
+        extractAll("(?si)<h1[^>]*>(.*?)</h1>", body).forEach { contentBlocks.add("h1|${it.trim()}") }
+        extractAll("(?si)<h2[^>]*>(.*?)</h2>", body).forEach { contentBlocks.add("h2|${it.trim()}") }
+        extractAll("(?si)<h3[^>]*>(.*?)</h3>", body).forEach { contentBlocks.add("h3|${it.trim()}") }
+        extractAll("(?si)<h4[^>]*>(.*?)</h4>", body).forEach { contentBlocks.add("h4|${it.trim()}") }
+        extractAll("(?si)<h5[^>]*>(.*?)</h5>", body).forEach { contentBlocks.add("h5|${it.trim()}") }
+        extractAll("(?si)<h6[^>]*>(.*?)</h6>", body).forEach { contentBlocks.add("h6|${it.trim()}") }
 
         // Параграфы — основной контент
-        extractAll("(?si)<p[^>]*>(.*?)</p>", body).forEach { contentBlocks.add("p|${it.strip()}") }
+        extractAll("(?si)<p[^>]*>(.*?)</p>", body).forEach { contentBlocks.add("p|${it.trim()}") }
 
         // Списки
-        extractAll("(?si)<li[^>]*>(.*?)</li>", body).forEach { contentBlocks.add("li|${it.strip()}") }
+        extractAll("(?si)<li[^>]*>(.*?)</li>", body).forEach { contentBlocks.add("li|${it.trim()}") }
 
         // Цитаты
-        extractAll("(?si)<blockquote[^>]*>(.*?)</blockquote>", body).forEach { contentBlocks.add("bq|${it.strip()}") }
+        extractAll("(?si)<blockquote[^>]*>(.*?)</blockquote>", body).forEach { contentBlocks.add("bq|${it.trim()}") }
 
         // Код
-        extractAll("(?si)<pre[^>]*>(.*?)</pre>", body).forEach { contentBlocks.add("pre|${it.strip()}") }
+        extractAll("(?si)<pre[^>]*>(.*?)</pre>", body).forEach { contentBlocks.add("pre|${it.trim()}") }
 
         // Ячейки таблиц (осмысленный табличный контент)
-        extractAll("(?si)<td[^>]*>(.*?)</td>", body).forEach { contentBlocks.add("td|${it.strip()}") }
-        extractAll("(?si)<th[^>]*>(.*?)</th>", body).forEach { contentBlocks.add("th|${it.strip()}") }
+        extractAll("(?si)<td[^>]*>(.*?)</td>", body).forEach { contentBlocks.add("td|${it.trim()}") }
+        extractAll("(?si)<th[^>]*>(.*?)</th>", body).forEach { contentBlocks.add("th|${it.trim()}") }
 
         // 5. Фильтрация мусора
         val filtered = contentBlocks
@@ -288,3 +288,4 @@ class WebFetchTool : BaseAgentTool() {
         return this.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
     }
 }
+
