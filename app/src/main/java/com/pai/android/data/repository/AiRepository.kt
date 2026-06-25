@@ -2,11 +2,18 @@ package com.pai.android.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.pai.android.agent.LocalAiInteraction
+import com.pai.android.agent.LocalReActAgent
+import com.pai.android.agent.LocalToolDescriptions
+import com.pai.android.agent.SmartRouter
 import com.pai.android.data.model.AiProvider
 import com.pai.android.data.model.AiResponse
 import com.pai.android.data.model.Attachment
+import com.pai.android.data.model.AttachmentType
+import com.pai.android.data.model.MessageRole
 import com.pai.android.data.model.NativeToolCall
 import com.pai.android.data.model.ProviderSettings
+import com.pai.android.data.model.SmartRouterConfig
 import com.pai.android.data.network.model.ChatMessage
 import com.pai.android.data.network.model.NativeToolDefinition
 import com.pai.android.data.service.WebSearchService
@@ -25,7 +32,12 @@ class AiRepository @Inject constructor(
     private val aiChatServiceFactory: AiChatServiceFactory,
     private val defaultDispatcher: CoroutineDispatcher,
     private val webSearchService: WebSearchService,
-    private val webSearchRepository: WebSearchRepository
+    private val webSearchRepository: WebSearchRepository,
+    private val localAiInteraction: LocalAiInteraction,
+    private val smartRouter: SmartRouter,
+    private val smartRouterRepository: SmartRouterRepository,
+    private val localReActAgent: LocalReActAgent,
+    private val toolRegistry: com.pai.android.agent.ToolRegistry
 ) {
     
     /**
@@ -47,6 +59,69 @@ class AiRepository @Inject constructor(
             if (settings == null || !settings.isValid()) {
                 println("❌ AiRepository.sendMessage: нет валидных настроек провайдера")
                 return@withContext Result.failure(IllegalStateException("No valid AI provider configured"))
+            }
+            
+            // === Smart Router: только для запросов без явного провайдера ===
+            val routerConfig = smartRouterRepository.get()
+            if (providerSettings == null && routerConfig.enabled) {
+                // Извлекаем чистый запрос пользователя (без технического контекста)
+                val lastMsg = messages.lastOrNull { it.isFromUser() }
+                val userPromptRaw = lastMsg?.content ?: ""
+                val cleanUserQuery = userPromptRaw
+                    .substringBefore("\nContext:")
+                    .substringBefore("\nКонтекст:")
+                    .removePrefix("User query: ")
+                    .removePrefix("Запрос пользователя: ")
+                    .trim()
+                val contextTokens = messages.fold(0) { acc, msg -> acc + msg.content.length / 4 }
+                println("🔧 SmartRouter: AiRepository cleanPrompt='${cleanUserQuery.take(100)}' (len=${cleanUserQuery.length}), fullLen=${userPromptRaw.length}")
+                val decision = smartRouter.route(
+                    prompt = cleanUserQuery,
+                    attachments = emptyList(),
+                    contextTokens = contextTokens,
+                    config = routerConfig
+                )
+                when (decision) {
+                    is com.pai.android.agent.RouteDecision.Local -> {
+                        println("🔧 SmartRouter: LOCAL decision - redirecting to LiteRT")
+                        val localSettings = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT).firstOrNull()
+                        if (localSettings != null && localSettings.isValid()) {
+                            val fullSystemContext = buildString {
+                                if (!systemPrompt.isNullOrBlank()) { append(systemPrompt.trim()); append("\n\n") }
+                                if (!memoryContext.isNullOrBlank()) { append(memoryContext.trim()); append("\n\n") }
+                            }.trimEnd()
+                            return@withContext handleLocalInference(localSettings, messages, fullSystemContext.ifEmpty { null })
+                        } else {
+                            println("⚠️ SmartRouter: LOCAL decision but LiteRT not configured, falling back to network")
+                        }
+                    }
+                    is com.pai.android.agent.RouteDecision.Network -> {
+                        println("🔧 SmartRouter: NETWORK decision (settingsId=${decision.providerSettingsId})")
+                        if (decision.providerSettingsId.isNotBlank()) {
+                            val networkSettings = settingsRepository.getSettings(decision.providerSettingsId)
+                            if (networkSettings != null && networkSettings.isValid()) {
+                                // Переключаем на сетевой провайдер без Router (providerSettings != null)
+                                return@withContext sendMessage(
+                                    messages = messages,
+                                    providerSettings = networkSettings,
+                                    systemPrompt = systemPrompt,
+                                    memoryContext = memoryContext,
+                                    tools = tools,
+                                    toolChoice = toolChoice
+                                )
+                            } else {
+                                println("⚠️ SmartRouter: NETWORK provider settings невалидны, fallback на текущего провайдера")
+                            }
+                        } else {
+                            println("⚠️ SmartRouter: NETWORK без settingsId, продолжаем с текущим провайдером")
+                        }
+                    }
+                    is com.pai.android.agent.RouteDecision.Fallback -> {
+                        println("🔧 SmartRouter: FALLBACK - ${decision.reason}")
+                        return@withContext Result.failure(Exception(decision.reason))
+                    }
+                    else -> {}
+                }
             }
             
             // Подготавливаем сообщения для API
@@ -107,6 +182,12 @@ class AiRepository @Inject constructor(
             )
             
             println("📤 API запрос: model=${request.model}, maxTokens=${request.maxTokens}, temperature=${request.temperature}, $logTools")
+            
+            // LITE_RT: реальный вызов локальной модели
+            if (settings.provider == AiProvider.LITE_RT) {
+                val localResult = handleLocalInference(settings, messages, systemPrompt)
+                return@withContext localResult
+            }
             
             // Создаём сервис для провайдера
             val aiService = aiChatServiceFactory.createService(settings)
@@ -193,7 +274,69 @@ class AiRepository @Inject constructor(
             if (settings == null || !settings.isValid()) {
                 return@withContext Result.failure(IllegalStateException("No valid AI provider configured"))
             }
-            
+
+            // === Smart Router: только для запросов без явного провайдера ===
+            val routerConfig = smartRouterRepository.get()
+            if (providerSettings == null && routerConfig.enabled) {
+                val lastMsg = messages.lastOrNull { it.isFromUser() }
+                    val userPromptRaw = lastMsg?.content ?: ""
+                    val cleanUserQuery = userPromptRaw
+                        .substringBefore("\nContext:")
+                        .substringBefore("\nКонтекст:")
+                        .removePrefix("User query: ")
+                        .removePrefix("Запрос пользователя: ")
+                        .trim()
+                    val contextTokens = messages.fold(0) { acc, msg -> acc + msg.content.length / 4 }
+                    println("🔧 SmartRouter (attachments): cleanPrompt='${cleanUserQuery.take(80)}' (len=${cleanUserQuery.length}), attachments=${attachments.size}")
+                    val decision = smartRouter.route(
+                        prompt = cleanUserQuery,
+                        attachments = attachments,
+                        contextTokens = contextTokens,
+                        config = routerConfig
+                    )
+                    when (decision) {
+                        is com.pai.android.agent.RouteDecision.Local -> {
+                            println("🔧 SmartRouter: LOCAL decision with attachments - redirecting to LiteRT")
+                            val localSettings = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT).firstOrNull()
+                            if (localSettings != null && localSettings.isValid()) {
+                                val fullSystemContext = buildString {
+                                    if (!systemPrompt.isNullOrBlank()) { append(systemPrompt.trim()); append("\n\n") }
+                                    if (!memoryContext.isNullOrBlank()) { append(memoryContext.trim()); append("\n\n") }
+                                }.trimEnd()
+                                return@withContext handleLocalInference(localSettings, messages, fullSystemContext.ifEmpty { null }, attachments = attachments)
+                            } else {
+                                println("⚠️ SmartRouter: LOCAL but LiteRT not configured")
+                            }
+                        }
+                        is com.pai.android.agent.RouteDecision.Network -> {
+                            println("🔧 SmartRouter (with attachments): NETWORK decision (settingsId=${decision.providerSettingsId})")
+                            if (decision.providerSettingsId.isNotBlank()) {
+                                val networkSettings = settingsRepository.getSettings(decision.providerSettingsId)
+                                if (networkSettings != null && networkSettings.isValid()) {
+                                    return@withContext sendMessageWithAttachments(
+                                        messages = messages,
+                                        attachments = attachments,
+                                        providerSettings = networkSettings,
+                                        systemPrompt = systemPrompt,
+                                        memoryContext = memoryContext,
+                                        tools = tools,
+                                        toolChoice = toolChoice
+                                    )
+                                } else {
+                                    println("⚠️ SmartRouter (attachments): NETWORK provider невалиден, fallback")
+                                }
+                            } else {
+                                println("⚠️ SmartRouter (attachments): NETWORK без settingsId")
+                            }
+                        }
+                        is com.pai.android.agent.RouteDecision.Fallback -> {
+                            println("🔧 SmartRouter: FALLBACK - ${decision.reason}")
+                            return@withContext Result.failure(Exception(decision.reason))
+                        }
+                        else -> {}
+                    }
+                }
+
             // Преобразуем сообщения в формат для API
             val chatMessages = messages.map { msg ->
                 // Для последнего пользовательского сообщения добавляем вложения
@@ -263,6 +406,12 @@ class AiRepository @Inject constructor(
             )
             
             println("📤 API запрос: model=${request.model}, maxTokens=${request.maxTokens}, temperature=${request.temperature}, toolChoice=${toolChoice}, $logTools")
+            
+            // LITE_RT: реальный вызов локальной модели
+            if (settings.provider == AiProvider.LITE_RT) {
+                val localResult = handleLocalInference(settings, messages, systemPrompt, attachments = attachments)
+                return@withContext localResult
+            }
             
             // Создаём сервис для провайдера
             val aiService = aiChatServiceFactory.createService(settings)
@@ -377,6 +526,104 @@ class AiRepository @Inject constructor(
         }
     }
     
+    /**
+     * Выполняет инференс на локальной модели LiteRT LM.
+     * Автоматически загружает модель, если она ещё не загружена.
+     */
+    private suspend fun handleLocalInference(
+        settings: ProviderSettings,
+        messages: List<com.pai.android.data.model.Message>,
+        systemPrompt: String?,
+        attachments: List<Attachment> = emptyList()
+    ): Result<AiResponse> {
+        val modelName = settings.localModelName.ifBlank { settings.modelName ?: "gemma-4-e2b" }
+        
+        try {
+            // Загружаем модель, если ещё не загружена
+            if (!localAiInteraction.isLoaded() || localAiInteraction.getLoadedModelId() != modelName) {
+                println("Загрузка локальной модели $modelName...")
+                val loadResult: Result<Unit> = localAiInteraction.loadModel(modelName, useGpuBackend = settings.useGpuBackend)
+                if (loadResult.isFailure) {
+                    return Result.failure<AiResponse>(Exception(
+                        "Ошибка загрузки модели $modelName: ${loadResult.exceptionOrNull()?.message}"
+                    ))
+                }
+                println("Модель $modelName загружена")
+            }
+            
+            val userMessage = messages.lastOrNull { it.role == MessageRole.USER }
+            val prompt = userMessage?.content ?: "..."
+            val imageCount = attachments.count { it.type == AttachmentType.IMAGE }
+            
+            // ReAct-режим: только текст, с инструментами
+            val useReAct = imageCount == 0 && localAiInteraction.isLoaded()
+            
+            val result: Result<String> = if (useReAct) {
+                println("🔧 LocalReAct: запуск с инструментами для '$modelName'...")
+                // Извлекаем чистый запрос (обрезаем контекст, который мог добавить DecisionEngine)
+                val cleanQuery = prompt
+                    .substringBefore("\nContext:")
+                    .substringBefore("\nКонтекст:")
+                    .removePrefix("User query: ")
+                    .removePrefix("Запрос пользователя: ")
+                    .trim()
+
+                val systemWithTools = buildString {
+                    if (!systemPrompt.isNullOrBlank()) { append(systemPrompt.trim()); append("\n\n") }
+                    append(LocalToolDescriptions.SYSTEM_PROMPT)
+                }
+
+                localReActAgent.run(
+                    userPrompt = cleanQuery.ifEmpty { prompt },
+                    systemPrompt = systemWithTools,
+                    executor = { name, args ->
+                        val toolCall = toolRegistry.getTool(name)
+                        if (toolCall != null) {
+                            try {
+                                // Конвертируем Map<String,String> в Map<String,Any>
+                                val anyArgs: Map<String, Any> = args
+                                val result = toolCall.execute(anyArgs)
+                                when (result) {
+                                    is com.pai.android.agent.ToolResult.Success -> result.output
+                                    is com.pai.android.agent.ToolResult.Error -> "Error: ${result.error}"
+                                    is com.pai.android.agent.ToolResult.ConfirmationRequired ->
+                                        "Confirmation needed: ${result.question}"
+                                }
+                            } catch (e: Exception) {
+                                "Error: ${e.message}"
+                            }
+                        } else {
+                            "Error: unknown tool '$name'. Available: ${LocalToolDescriptions.ALLOWED_TOOL_NAMES.joinToString(", ")}"
+                        }
+                    }
+                )
+            } else {
+                println("Генерация на локальной $modelName (изображений: $imageCount)...")
+                localAiInteraction.generate(
+                    prompt = prompt,
+                    systemPrompt = systemPrompt,
+                    attachments = attachments,
+                    thinkingModeEnabled = settings.thinkingModeEnabled
+                )
+            }
+            
+            return if (result.isSuccess) {
+                Result.success<AiResponse>(AiResponse.success(
+                    text = result.getOrThrow(),
+                    provider = AiProvider.LITE_RT,
+                    modelUsed = modelName
+                ))
+            } else {
+                Result.failure<AiResponse>(Exception(
+                    "Ошибка локальной генерации: ${result.exceptionOrNull()?.message}"
+                ))
+            }
+        } catch (e: Exception) {
+            println("LITE_RT ошибка: ${e.message}")
+            return Result.failure<AiResponse>(e)
+        }
+    }
+
     /**
      * Выполняет веб-поиск, если он включен в настройках.
      * Возвращает контекст с результатами поиска для добавления в системный промпт,

@@ -144,6 +144,7 @@ object AttachmentProcessor {
             AiProvider.OPENROUTER -> true // Может проксировать к провайдерам с vision
             AiProvider.OLLAMA -> false // Зависит от модели, по умолчанию нет
             AiProvider.CUSTOM -> true // Кастомный endpoint — пользователь сам отвечает за совместимость
+            AiProvider.LITE_RT -> false // Локальная модель — без изображений
         }
     }
     
@@ -156,7 +157,8 @@ object AttachmentProcessor {
             AiProvider.DEEPSEEK -> ImageFormat.BASE64 // DeepSeek-VL принимает base64
             AiProvider.OPENROUTER -> ImageFormat.BASE64 // OpenRouter принимает base64
             AiProvider.OLLAMA -> ImageFormat.NONE // Ollama не поддерживает
-            AiProvider.CUSTOM -> ImageFormat.BASE64 // Кастомный endpoint — скорее всего OpenAI-совместимый
+            AiProvider.CUSTOM -> ImageFormat.BASE64 // Кастомный endpoint
+            AiProvider.LITE_RT -> ImageFormat.NONE // Локальная модель — без изображений
         }
     }
     

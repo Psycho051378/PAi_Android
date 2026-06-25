@@ -42,7 +42,11 @@ data class ContextSnapshot(
     data class SystemInfo(
         val isCharging: Boolean = false,
         val batteryLevel: Int = 0,
-        val wifiEnabled: Boolean = false
+        val wifiEnabled: Boolean = false,
+        val notificationListenerActive: Boolean = false,
+        val proactiveEnabled: Boolean = false,
+        val forwardNotifications: Boolean = false,
+        val notificationDigest: Boolean = false
     )
 
     /**
@@ -83,10 +87,20 @@ data class ContextSnapshot(
             }
         }
 
-        // Уведомления
+        // Уведомления — всегда показываем статус
+        sb.appendLine()
+        val listenerIcon = if (systemInfo.notificationListenerActive) "✅" else "❌"
+        val proactiveIcon = if (systemInfo.proactiveEnabled) "✅" else "❌"
+        val forwardIcon = if (systemInfo.forwardNotifications) "✅" else "❌"
+        val digestIcon = if (systemInfo.notificationDigest) "✅" else "❌"
+        sb.appendLine("🔔 **Уведомления (${recentNotifications.size} в буфере):**")
+        sb.appendLine("  $listenerIcon Listener: ${if (systemInfo.notificationListenerActive) "активен" else "не активен"}")
+        sb.appendLine("  $proactiveIcon Проактивный режим: ${if (systemInfo.proactiveEnabled) "вкл" else "выкл"}")
+        sb.appendLine("  $forwardIcon Пересылка в чат: ${if (systemInfo.forwardNotifications) "вкл" else "выкл"}")
+        sb.appendLine("  $digestIcon Дайджест уведомлений: ${if (systemInfo.notificationDigest) "вкл" else "выкл"}")
         if (recentNotifications.isNotEmpty()) {
             sb.appendLine()
-            sb.appendLine("🔔 **Последние уведомления:**")
+            sb.appendLine("  **Последние:**")
             recentNotifications.take(3).forEach { n ->
                 sb.appendLine("  • ${n.toContextString()}")
             }

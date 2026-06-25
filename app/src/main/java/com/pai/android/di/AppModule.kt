@@ -7,6 +7,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.pai.android.data.local.AppDatabase
 import com.pai.android.data.local.AttachmentDao
+import com.pai.android.data.local.MIGRATION_19_20
+import com.pai.android.data.local.MIGRATION_20_21
 import com.pai.android.data.local.GeoTaskDao
 import com.pai.android.data.local.ChatDao
 import com.pai.android.data.local.MemoryDao
@@ -26,6 +28,7 @@ import com.pai.android.data.repository.RoleRepository
 import com.pai.android.data.repository.SummaryRepository
 import com.pai.android.data.repository.ThemePreferencesRepository
 import com.pai.android.data.repository.WebSearchRepository
+import com.pai.android.data.repository.SmartRouterRepository
 import com.pai.android.data.detector.FactExtractor
 import com.pai.android.data.detector.SignificanceDetector
 import com.pai.android.data.summarizer.SmartSummarizer
@@ -46,12 +49,14 @@ import com.pai.android.agent.skills.PythonSkill
 import com.pai.android.agent.skills.EmailSkill
 import com.pai.android.agent.skills.NotificationSkill
 import com.pai.android.agent.skills.HomeSkill
+import com.pai.android.agent.skills.SmsSkill
 import com.pai.android.agent.skills.home.router.RouterScanner
 import com.pai.android.agent.OpenFileSkill
 import com.pai.android.agent.AppLaunchSkill
 import com.pai.android.agent.AgentPlanner
 import com.pai.android.agent.ToolRegistry
 import com.pai.android.agent.ToolSkillAdapter
+import com.pai.android.agent.LocalReActAgent
 import com.pai.android.agent.ReActAgent
 import com.pai.android.agent.TaskQueue
 import com.pai.android.agent.TaskScheduler
@@ -577,7 +582,7 @@ object AppModule {
             AppDatabase::class.java,
             "pai_database"
         )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19) // Явные миграции с версии 1 на 19
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21) // Явные миграции с версии 1 на 21
         .fallbackToDestructiveMigration() // Уничтожает БД при несовпадении схемы (резерв)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
@@ -781,7 +786,15 @@ object AppModule {
             dailyMemoryService
         )
     }
-    
+
+    @Provides
+    @Singleton
+    fun provideSmartRouterRepository(
+        @ApplicationContext context: Context
+    ): SmartRouterRepository {
+        return SmartRouterRepository(context)
+    }
+
     @Provides
     @Singleton
     fun provideAiRepository(
@@ -789,14 +802,24 @@ object AppModule {
         aiChatServiceFactory: AiChatServiceFactory,
         defaultDispatcher: kotlinx.coroutines.CoroutineDispatcher,
         webSearchService: WebSearchService,
-        webSearchRepository: WebSearchRepository
+        webSearchRepository: WebSearchRepository,
+        localAiInteraction: com.pai.android.agent.LocalAiInteraction,
+        smartRouter: com.pai.android.agent.SmartRouter,
+        smartRouterRepository: SmartRouterRepository,
+        localReActAgent: com.pai.android.agent.LocalReActAgent,
+        toolRegistry: com.pai.android.agent.ToolRegistry
     ): AiRepository {
         return AiRepository(
             settingsRepository,
             aiChatServiceFactory,
             defaultDispatcher,
             webSearchService,
-            webSearchRepository
+            webSearchRepository,
+            localAiInteraction,
+            smartRouter,
+            smartRouterRepository,
+            localReActAgent,
+            toolRegistry
         )
     }
     
@@ -1072,6 +1095,30 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSmsTool(
+        smsSkill: SmsSkill
+    ): com.pai.android.agent.tools.SmsTool {
+        return com.pai.android.agent.tools.SmsTool(smsSkill)
+    }
+
+    @Provides
+    @Singleton
+    fun provideContactsTool(
+        contactsSkill: com.pai.android.agent.skills.ContactsSkill
+    ): com.pai.android.agent.tools.ContactsTool {
+        return com.pai.android.agent.tools.ContactsTool(contactsSkill)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLaunchAppTool(
+        appLaunchSkill: com.pai.android.agent.AppLaunchSkill
+    ): com.pai.android.agent.tools.LaunchAppTool {
+        return com.pai.android.agent.tools.LaunchAppTool(appLaunchSkill)
+    }
+
+    @Provides
+    @Singleton
     fun provideGeoSkill(
         @ApplicationContext context: Context,
         geoTaskRepository: GeoTaskRepository,
@@ -1112,6 +1159,9 @@ object AppModule {
         clipboardTool: ClipboardTool,
         calendarTool: CalendarTool,
         mapsTool: MapsTool,
+        smsTool: com.pai.android.agent.tools.SmsTool,
+        contactsTool: com.pai.android.agent.tools.ContactsTool,
+        launchAppTool: com.pai.android.agent.tools.LaunchAppTool,
         locationService: LocationService,
         contextEngine: ContextEngine,
         intentRecognizer: IntentRecognizer,
@@ -1151,6 +1201,9 @@ object AppModule {
         toolRegistry.register(clipboardTool)
         toolRegistry.register(calendarTool)
         toolRegistry.register(mapsTool)
+        toolRegistry.register(smsTool)
+        toolRegistry.register(contactsTool)
+        toolRegistry.register(launchAppTool)
         println("🔧 Зарегистрировано инструментов: ${toolRegistry.getAllTools().size}")
         
         // Регистрируем инструменты как навыки (через адаптер)

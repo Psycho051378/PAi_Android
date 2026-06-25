@@ -46,7 +46,8 @@ class MemoryTool constructor(
                 },
                 "category": {
                     "type": "string",
-                    "description": "Категория факта (для save_fact, get_fact)"
+                    "enum": ["personal_info", "ai_info", "preferences", "contacts", "locations", "projects", "context", "tasks"],
+                    "description": "Категория факта (для save_fact, get_fact). personal_info — о пользователе, ai_info — об ассистенте, preferences — предпочтения пользователя"
                 },
                 "key": {
                     "type": "string",
@@ -91,7 +92,17 @@ class MemoryTool constructor(
     
     override suspend fun execute(params: Map<String, Any>): ToolResult {
         return try {
-            val command = getStringParam(params, "command")
+            // Маппинг: LocalReAct описывает memory(action, text, query), а MemoryTool ждёт command
+            val command = if (params.containsKey("command")) {
+                getStringParam(params, "command")
+            } else {
+                when (getStringParam(params, "action")) {
+                    "search" -> "search_facts"
+                    "save" -> "save_fact"
+                    "recall" -> "get_fact"
+                    else -> null
+                }
+            } ?: return ToolResult.Error("Параметр 'command' не найден или имеет неверный тип")
             
             when (command) {
                 "search_facts" -> executeSearchFacts(params)
@@ -160,15 +171,20 @@ class MemoryTool constructor(
     }
     
     private suspend fun executeSaveFact(params: Map<String, Any>): ToolResult {
-        val category = getStringParam(params, "category")
-        val key = getStringParam(params, "key")
-        val value = getStringParam(params, "value")
+        // LocalReAct передаёт text (содержимое) и query (поиск/описание) — маппим
+        // Категория без явного указания: не предполагаем personal_info — AI сам разберёт
+        val category = if (params.containsKey("category")) getStringParam(params, "category") else ""
+        val key = if (params.containsKey("key")) getStringParam(params, "key") else params["query"]?.toString()?.take(80) ?: ""
+        val value = if (params.containsKey("value")) getStringParam(params, "value") else params["text"]?.toString() ?: ""
         val confidence = (params["confidence"] as? Number)?.toFloat() ?: 0.9f
         val tags = params["tags"] as? String
         
+        // Если категория не указана — AI парсинг сам определит, fallback на global
+        val effectiveCategory = category.ifBlank { "global" }
+        
         // Если value содержит несколько фактов (длинный текст) — пробуем распарсить через AI
-        if (value.length > 60 && aiRepository != null && (key.length > 40 || key == value.take(50))) {
-            val parsedFacts = parseFactsWithAI(value, category)
+        if (value.length > 30 && aiRepository != null && (key.isBlank() || key.length > 40 || key == value.take(50))) {
+            val parsedFacts = parseFactsWithAI(value, effectiveCategory)
             if (parsedFacts.isNotEmpty()) {
                 var savedCount = 0
                 for ((cat, k, v, conf, sc, tg) in parsedFacts) {
@@ -202,25 +218,25 @@ class MemoryTool constructor(
         } else {
             // LLM не указала scope или сказала 'global' — определяем по категории
             when {
-                category.contains("personal", ignoreCase = true) -> "user"
-                category.contains("preferences", ignoreCase = true) -> "user"
-                category.contains("contacts", ignoreCase = true) -> "user"
-                category.contains("ai", ignoreCase = true) -> "ai"
-                category.contains("locations", ignoreCase = true) -> "global"
+                effectiveCategory.contains("personal", ignoreCase = true) -> "user"
+                effectiveCategory.contains("preferences", ignoreCase = true) -> "user"
+                effectiveCategory.contains("contacts", ignoreCase = true) -> "user"
+                effectiveCategory.contains("ai", ignoreCase = true) -> "ai"
+                effectiveCategory.contains("locations", ignoreCase = true) -> "global"
                 else -> explicitScope ?: "global"
             }
         }
         
         val scopeForDisplay = getScopeEmoji(scope)
         memoryRepository.insertPermanentFact(PermanentMemory(
-            category = category, key = key, value = value,
+            category = effectiveCategory, key = key, value = value,
             confidence = confidence, scope = scope, tags = tags
         ))
         
         return ToolResult.Success(
-            output = "$scopeForDisplay Факт сохранён: [$category] $key = $value (${String.format("%.0f", confidence * 100f)}%)",
+            output = "$scopeForDisplay Факт сохранён: [$effectiveCategory] $key = $value (${String.format("%.0f", confidence * 100f)}%)",
             data = mapOf(
-                "category" to category, "key" to key, "value" to value,
+                "category" to effectiveCategory, "key" to key, "value" to value,
                 "scope" to scope, "goal_achieved" to true
             )
         )
@@ -236,9 +252,14 @@ class MemoryTool constructor(
                 Extract individual facts from user text.
                 Each fact: category, key (snake_case, English), value (in user language).
                 
-                Categories: personal_info (name, date, birth place, profession, location),
-                preferences (likes, dislikes), contacts (phone, email), ai_info (AI info),
-                global (projects, skills, context).
+                Categories:
+                - personal_info: info about the HUMAN user (name, date, birth place, location)
+                - ai_info: info about the AI assistant itself (name, role, personality)
+                - preferences: user likes/dislikes (food, hobbies)
+                - contacts: phone, email
+                - global: projects, skills, context
+                
+                Analyze the text contextually — if it mentions the AI assistant's own info, use ai_info.
                 
                 Text: "$content"
                 

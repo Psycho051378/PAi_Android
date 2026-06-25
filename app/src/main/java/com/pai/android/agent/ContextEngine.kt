@@ -150,7 +150,11 @@ class ContextEngine @Inject constructor(
                     activeTasks = tasks,
                     systemInfo = ContextSnapshot.SystemInfo(
                         isCharging = battery.first,
-                        batteryLevel = battery.second
+                        batteryLevel = battery.second,
+                        notificationListenerActive = isListenerActive(),
+                        proactiveEnabled = proactiveTrigger.settings.enabled,
+                        forwardNotifications = proactiveTrigger.settings.forwardNotifications,
+                        notificationDigest = proactiveTrigger.settings.notificationDigest
                     )
                 )
             }
@@ -333,6 +337,22 @@ class ContextEngine @Inject constructor(
             i++
         }
         return tasks
+    }
+
+    /**
+     * Проверяет, активен ли NotificationListener.
+     */
+    private fun isListenerActive(): Boolean {
+        return try {
+            val cn = android.content.ComponentName(context, com.pai.android.service.NotificationListener::class.java)
+            val flat = android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                "enabled_notification_listeners"
+            )
+            flat?.contains(cn.flattenToString()) == true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     companion object {

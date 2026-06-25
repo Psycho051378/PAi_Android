@@ -111,6 +111,37 @@
     <string name="settings_about_desc">Разработано PygmalionAi Разумные боты</string>
     <string name="settings_navigate">Перейти</string>
 
+    <!-- Permissions -->
+    <string name="settings_permissions">Разрешения</string>
+    <string name="settings_permissions_desc">Управление разрешениями приложения (уведомления, геолокация, микрофон)</string>
+
+    <!-- Smart Router -->
+    <string name="settings_smart_router">Smart Router</string>
+    <string name="settings_smart_router_desc">Распределение запросов между локальной и сетевой моделью</string>
+    <string name="smart_router_title">Smart Router</string>
+    <string name="smart_router_enabled">Включён</string>
+    <string name="smart_router_disabled">Выключен</string>
+    <string name="smart_router_threshold">Порог сложности</string>
+    <string name="smart_router_threshold_desc">Чем ниже — тем чаще запросы уходят в сеть</string>
+    <string name="smart_router_max_tokens">Макс. токенов для фолбэка</string>
+    <string name="smart_router_max_tokens_desc">При недоступности сети запросы короче этого лимита отправятся на локалку</string>
+    <string name="smart_router_multimodal">Мультимодальные → локалка</string>
+    <string name="smart_router_fallback">Фолбэк на локалку при ошибке</string>
+    <string name="smart_router_hybrid">Гибридный режим (экспериментальный)</string>
+    <string name="smart_router_saved">✅ Настройки сохранены</string>
+    <string name="smart_router_save">Сохранить</string>
+    <string name="smart_router_network_model">Сетевая модель</string>
+    <string name="smart_router_no_providers">Нет настроенных сетевых провайдеров. Добавьте провайдера в настройках AI.</string>
+    <string name="smart_router_model_label">Модель:</string>
+    <string name="smart_router_local_model">Локальная модель</string>
+    <string name="smart_router_local_desc">Используется активная локальная модель из AI Providers (LiteRT)</string>
+    <string name="smart_router_easier">Проще</string>
+    <string name="smart_router_harder">Сложнее</string>
+    <string name="smart_router_current_value">Текущее значение: %d%%</string>
+    <string name="smart_router_extra">Дополнительно</string>
+    <string name="smart_router_desc">Smart Router распределяет запросы: простые и мультимодальные → локальная модель, сложные и многошаговые → сетевая модель.</string>
+    <string name="smart_router_auto_select">Автоматически выбирать модель</string>
+
     <!-- AboutScreen -->
     <string name="about_title">О приложении</string>
     <string name="about_app_name">Pai Android</string>
@@ -537,4 +568,31 @@
     <string name="perm_notification_listener_desc">Прослушивание уведомлений от других приложений (системная настройка)</string>
     <string name="perm_manage_storage">Управление хранилищем</string>
     <string name="perm_manage_storage_desc">Полный доступ к файлам (устаревшие версии Android)</string>
+
+    <!-- Local model (LiteRT) provider settings -->
+    <string name="provider_local_model_title">🧠 Локальная модель</string>
+    <string name="provider_local_model_desc">Не требует API-ключа. Работает напрямую через LiteRT.</string>
+    <string name="provider_local_model_select">Выберите модель:</string>
+    <string name="provider_local_model_compatible">✅ Совместимо</string>
+    <string name="provider_local_model_incompatible">❌ Несовместимо</string>
+    <string name="provider_local_model_downloaded">✅ Модель скачана</string>
+    <string name="provider_local_model_check">🔍 Проверить совместимость</string>
+    <string name="provider_local_model_checking">Проверка…</string>
+    <string name="provider_local_model_delete">Удалить модель</string>
+    <string name="provider_local_model_size">%d МБ</string>
+    <string name="provider_local_model_ram">min %d МБ RAM</string>
+    <string name="provider_accelerator_title">Ускоритель:</string>
+    <string name="provider_use_gpu">Использовать GPU</string>
+    <string name="provider_gpu_desc">GPU — быстрее, выше энергопотребление</string>
+    <string name="provider_cpu_desc">CPU — медленнее, ниже энергопотребление</string>
+    <string name="provider_model_max_context_placeholder">Напр. 1000000</string>
+    <string name="provider_model_max_output_placeholder">Напр. 384000</string>
+    <string name="provider_download_model">Скачать модель</string>
+    <string name="provider_name_lite_rt">Локально (LiteRT)</string>
+    <string name="provider_name_custom">Другой провайдер</string>
+    <string name="provider_name_openrouter">OpenRouter</string>
+    <string name="provider_name_deepseek">DeepSeek</string>
+    <string name="provider_name_openai">OpenAI</string>
+    <string name="provider_name_ollama">Ollama</string>
+
 </resources>

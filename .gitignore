@@ -56,3 +56,7 @@ apk/
 !apk/
 !apk/*.apk
 
+# Local plans / drafts
+PLAN_LOCAL_MODELS.md
+docs/smart-router-plan.md
+
