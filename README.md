@@ -94,7 +94,7 @@ You can download the latest debug APK directly:
 
 ### Prerequisites
 
-- **JDK 17+** — Download from [Eclipse Adoptium](https://adoptium.net/temurin/releases/?version=17)
+- **JDK 21+** — Download from [Eclipse Adoptium](https://adoptium.net/temurin/releases/?version=21)
 - Android Studio Hedgehog (2023.1.1+) or later
 - Android SDK 35+
 - A physical device or emulator running Android 7.0+ (API 24)
