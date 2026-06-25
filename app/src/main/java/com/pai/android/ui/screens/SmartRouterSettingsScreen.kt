@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -224,6 +225,54 @@ fun SmartRouterSettingsScreen(
                             Checkbox(checked = state.enableHybrid, onCheckedChange = { viewModel.setEnableHybrid(it) })
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.smart_router_hybrid), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        }
+                        // Ползунок порога гибридного режима (показывается только при включённом гибриде)
+                        AnimatedVisibility(visible = state.enableHybrid) {
+                            Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
+                                Text(
+                                    text = stringResource(
+                                    R.string.hybrid_threshold_label,
+                                    state.hybridThreshold,
+                                    state.hybridThreshold,
+                                    state.hybridThreshold + 1
+                                ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Slider(
+                                    value = state.hybridThreshold.toFloat(),
+                                    onValueChange = { viewModel.setHybridThreshold(it.toInt()) },
+                                    valueRange = 1f..9f,
+                                    steps = 7,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.PhoneAndroid,
+                                            contentDescription = "локальная модель",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(" 1", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    
+                                    Text(
+                                        text = "local | network",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("9 ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Icon(
+                                            imageVector = Icons.Default.Cloud,
+                                            contentDescription = "сетевая модель",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

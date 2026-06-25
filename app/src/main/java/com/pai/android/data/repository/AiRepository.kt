@@ -124,6 +124,15 @@ class AiRepository @Inject constructor(
                         println("🔧 SmartRouter: FALLBACK - ${decision.reason}")
                         return@withContext Result.failure(Exception(decision.reason))
                     }
+                    is com.pai.android.agent.RouteDecision.Hybrid -> {
+                        println("🔧 SmartRouter: HYBRID - decomposing query")
+                        return@withContext handleHybrid(
+                            messages = messages,
+                            systemPrompt = systemPrompt,
+                            memoryContext = memoryContext,
+                            settings = settings
+                        )
+                    }
                     else -> {}
                 }
             }
@@ -627,6 +636,247 @@ class AiRepository @Inject constructor(
             return Result.failure<AiResponse>(e)
         }
     }
+
+    // ======================= Hybrid Router =======================
+
+    // ======================= Hybrid Router =======================
+
+    /**
+     * Гибридный режим: **текущая модель** (любая — DeepSeek, GPT, Gemma, Ollama)
+     * получает запрос, разбивает его на шаги, оценивает сложность каждого (1-10),
+     * простые (1-4) отдаёт локальной модели LiteRT, сложные (5-10) — сетевой.
+     */
+    private suspend fun handleHybrid(
+        messages: List<com.pai.android.data.model.Message>,
+        systemPrompt: String?,
+        memoryContext: String?,
+        settings: ProviderSettings
+    ): Result<AiResponse> {
+        // Сетевая модель — из конфига Smart Router (куда отправлять сложные шаги)
+        val routerConfig = smartRouterRepository.get()
+        val networkSettings = if (routerConfig.networkProviderSettingsId.isNotBlank()) {
+            settingsRepository.getSettings(routerConfig.networkProviderSettingsId)
+        } else {
+            settings
+        }
+        val effectiveNetworkSettings = networkSettings ?: settings
+
+        val lastUserMsg = messages.lastOrNull { it.isFromUser() }?.content ?: ""
+        val cleanQuery = lastUserMsg
+            .substringBefore("\nContext:")
+            .substringBefore("\nКонтекст:")
+            .removePrefix("User query: ")
+            .removePrefix("Запрос пользователя: ")
+            .trim()
+
+        println("🔧 Hybrid: plan model=${settings.getEffectiveModel()}, network model=${effectiveNetworkSettings.getEffectiveModel()}")
+        println("🔧 Hybrid: query='${cleanQuery.take(80)}'")
+
+        // ======================= ШАГ 1: Текущая модель составляет план =======================
+
+        val plannerPrompt = buildString {
+            appendLine("Ты — планировщик. Пользователь задал задачу. Разбей её на 2-4 шага.")
+            appendLine()
+            appendLine("Для каждого шага укажи сложность от 1 до 10 в формате:")
+            appendLine("  [сложность] Описание шага")
+            appendLine()
+            appendLine("Где:")
+            appendLine("  1-4 — простой шаг (короткий ответ, факт, определение)")
+            appendLine("  5-10 — сложный/творческий шаг (анализ, стихи, код, сравнение)")
+            appendLine()
+            appendLine("Формат ответа — только нумерованный список:")
+            appendLine("1. [3] Краткое определение чёрной дыры")
+            appendLine("2. [8] Стихотворение про космос")
+            appendLine()
+            append("Запрос пользователя: $cleanQuery")
+            append("\nПлан:")
+        }
+
+        // Определяем, кто будет планировать:
+        // - Если текущая модель — LiteRT и она загружена → локальное планирование
+        // - Если текущая модель — LiteRT, но не загружена → используем сетевую модель для планирования
+        // - Если текущая модель — сетевая (DeepSeek/GPT/...) → она и планирует
+        val planModelSettings = if (settings.provider == AiProvider.LITE_RT) {
+            if (localAiInteraction.isLoaded()) settings else effectiveNetworkSettings
+        } else {
+            settings
+        }
+
+        val planText = if (planModelSettings.provider == AiProvider.LITE_RT && localAiInteraction.isLoaded()) {
+            println("🔧 Hybrid: локальное планирование (${planModelSettings.getEffectiveModel()})...")
+            val result = localAiInteraction.generate(plannerPrompt, maxTokens = 512)
+            if (result.isSuccess) {
+                result.getOrThrow()
+            } else {
+                println("🔧 Hybrid: локальное планирование не удалось: ${result.exceptionOrNull()?.message}")
+                return sendMessage(
+                    messages = messages,
+                    providerSettings = settings,
+                    systemPrompt = systemPrompt,
+                    memoryContext = memoryContext
+                )
+            }
+        } else {
+            println("🔧 Hybrid: запрос плана к ${planModelSettings.getEffectiveModel()}...")
+            val aiService = aiChatServiceFactory.createService(planModelSettings)
+            val planResponse = aiService.sendMessage(
+                com.pai.android.data.network.model.ChatRequest(
+                    model = planModelSettings.getEffectiveModel(),
+                    messages = listOf(
+                        com.pai.android.data.network.model.ChatMessage.createTextMessage(
+                            role = com.pai.android.data.model.MessageRole.USER,
+                            text = plannerPrompt
+                        )
+                    ),
+                    temperature = 0.3,
+                    maxTokens = 1024
+                )
+            )
+            if (planResponse.isSuccessful) {
+                planResponse.body()?.getContent() ?: ""
+            } else {
+                val errorBody = planResponse.errorBody()?.string() ?: planResponse.message()
+                println("🔧 Hybrid: планирование не удалось (HTTP ${planResponse.code()}: $errorBody), fallback")
+                return sendMessage(
+                    messages = messages,
+                    providerSettings = settings,
+                    systemPrompt = systemPrompt,
+                    memoryContext = memoryContext
+                )
+            }
+        }
+        println("🔧 Hybrid: план получен от ${planModelSettings.getEffectiveModel()}:\n$planText")
+
+        // ======================= ШАГ 2: Парсинг плана =======================
+
+        data class Step(val description: String, val complexity: Int)
+
+        val steps = mutableListOf<Step>()
+        for (line in planText.lines()) {
+            val trimmed = line.trim()
+            if (trimmed.isBlank()) continue
+            // Убираем нумерацию: "1. " или "1)" или "- "
+            val content = trimmed
+                .replaceFirst(Regex("^\\d+[\\.\\)]\\s*"), "")
+                .replaceFirst(Regex("^[-\\*]\\s*"), "")
+                .trim()
+            // Ищем [число] — сложность
+            val complexityMatch = Regex("\\[(\\d+)\\]").find(content)
+            val complexity = complexityMatch?.groupValues?.get(1)?.toIntOrNull() ?: 5
+            val desc = content
+                .replaceFirst(Regex("\\[\\d+\\]"), "")
+                .replaceFirst(Regex("\\[local\\]", RegexOption.IGNORE_CASE), "")
+                .replaceFirst(Regex("\\[network\\]", RegexOption.IGNORE_CASE), "")
+                .replaceFirst(Regex("сложность\\s*\\d+", RegexOption.IGNORE_CASE), "")
+                .trim()
+            if (desc.isNotBlank()) {
+                steps.add(Step(desc, complexity.coerceIn(1, 10)))
+            }
+        }
+
+        if (steps.isEmpty()) {
+            println("🔧 Hybrid: ни одного шага не распарсено, fallback")
+            return sendMessage(
+                messages = messages,
+                providerSettings = settings,
+                systemPrompt = systemPrompt,
+                memoryContext = memoryContext
+            )
+        }
+
+        println("🔧 Hybrid: распарсено ${steps.size} шагов: ${steps.map { "[${it.complexity}]${if (it.complexity <= 4) "L" else "N"}" }}")
+
+        // ======================= ШАГ 3: Выполнение шагов =======================
+
+        val localThreshold = routerConfig.hybridThreshold.coerceIn(1, 9) // сложность 1-N → local, N+1-10 → network
+        val results = mutableListOf<String>()
+
+        for ((index, step) in steps.withIndex()) {
+            val stepNum = index + 1
+            val useLocal = step.complexity <= localThreshold
+            println("🔧 Hybrid: шаг $stepNum/${steps.size} — ${if (useLocal) "LOCAL" else "NETWORK"} (сложность ${step.complexity}): '${step.description.take(60)}'")
+
+            if (useLocal) {
+                // Пытаемся выполнить на LiteRT, если недоступен — фолбэк на сеть
+                try {
+                    val localSettings = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT).firstOrNull()
+                    if (localSettings != null && localSettings.isValid()) {
+                        val localResult = handleLocalInference(
+                            settings = localSettings,
+                            messages = listOf(com.pai.android.data.model.Message.createAssistantMessage("hybrid", "")),
+                            systemPrompt = "Ответь на следующий запрос кратко (1-3 предложения): " + step.description
+                        )
+                        if (localResult.isSuccess) {
+                            results.add("Шаг $stepNum: ${localResult.getOrThrow().text}")
+                        } else {
+                            println("🔧 Hybrid: локалка ошибка, фолбэк на сеть")
+                            fallbackToNetwork(step.description, stepNum, results, effectiveNetworkSettings)
+                        }
+                    } else {
+                        println("🔧 Hybrid: LiteRT не настроен, фолбэк на сеть")
+                        fallbackToNetwork(step.description, stepNum, results, effectiveNetworkSettings)
+                    }
+                } catch (e: Exception) {
+                    println("🔧 Hybrid: ошибка локалки: ${e.message}, фолбэк на сеть")
+                    fallbackToNetwork(step.description, stepNum, results, effectiveNetworkSettings)
+                }
+            } else {
+                // Выполняем на сетевой модели
+                try {
+                    val netResult = sendMessage(
+                        messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid", step.description)),
+                        providerSettings = effectiveNetworkSettings,
+                        systemPrompt = "Ответь на запрос (без лишних пояснений)."
+                    )
+                    if (netResult.isSuccess) {
+                        results.add("Шаг $stepNum: ${netResult.getOrThrow().text}")
+                    } else {
+                        results.add("Шаг $stepNum: [ошибка сети: ${netResult.exceptionOrNull()?.message}]")
+                    }
+                } catch (e: Exception) {
+                    results.add("Шаг $stepNum: [ошибка: ${e.message}]")
+                }
+            }
+        }
+
+        // ======================= ШАГ 4: Сборка ответа =======================
+
+        val finalText = results.joinToString("\n\n")
+        println("🔧 Hybrid: финальный ответ собран (${finalText.length} символов)")
+
+        return Result.success(AiResponse.success(
+            text = finalText,
+            provider = settings.provider,
+            modelUsed = "hybrid(${settings.getEffectiveModel()}/${effectiveNetworkSettings.getEffectiveModel()})"
+        ))
+    }
+
+    /**
+     * Фолбэк: выполняет шаг гибрида на сетевой модели (если локалка недоступна).
+     */
+    private suspend fun fallbackToNetwork(
+        description: String,
+        stepNum: Int,
+        results: MutableList<String>,
+        networkSettings: ProviderSettings
+    ) {
+        try {
+            val netResult = sendMessage(
+                messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid", description)),
+                providerSettings = networkSettings,
+                systemPrompt = "Ответь на запрос (без лишних пояснений)."
+            )
+            if (netResult.isSuccess) {
+                results.add("Шаг $stepNum: ${netResult.getOrThrow().text}")
+            } else {
+                results.add("Шаг $stepNum: [ошибка: ${netResult.exceptionOrNull()?.message}]")
+            }
+        } catch (e: Exception) {
+            results.add("Шаг $stepNum: [ошибка: ${e.message}]")
+        }
+    }
+
+
 
     /**
      * Выполняет веб-поиск, если он включен в настройках.

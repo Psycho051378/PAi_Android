@@ -10,5 +10,6 @@ data class SmartRouterConfig(
     val maxLocalTokens: Int = 512,                   // макс токенов для локалки при фолбэке
     val routeMultimodalToLocal: Boolean = true,       // изображения/аудио → локалка
     val enableFallback: Boolean = true,               // фолбэк на локалку при недоступности сети
-    val enableHybrid: Boolean = false                 // гибридный режим (экспериментальный)
+    val enableHybrid: Boolean = false,                // гибридный режим (экспериментальный)
+    val hybridThreshold: Int = 4                      // порог сложности для гибрида: 1-? → local, ?-10 → network
 )

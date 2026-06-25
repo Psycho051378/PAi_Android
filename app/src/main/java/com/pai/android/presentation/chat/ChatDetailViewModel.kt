@@ -346,7 +346,7 @@ class ChatDetailViewModel @Inject constructor(
 
         sendMessageJob?.cancel()
         sendMessageJob = sendJobScope.launch {
-            _state.update { it.copy(isSending = true, workStatus = "🤔 Анализирую запрос...") }
+            _state.update { it.copy(isSending = true, workStatus = context.getString(com.pai.android.R.string.work_status_analyzing)) }
             try {
                 // Сохраняем chatId для отправки уведомлений scheduler
                 com.pai.android.agent.DecisionEngine.lastChatId = chatId
@@ -421,11 +421,11 @@ class ChatDetailViewModel @Inject constructor(
             
             // Получаем расширенный контекст (факты + суммаризации)
             val query = userMessage?.content ?: allMessages.lastOrNull { it.isFromUser() }?.content ?: ""
-            updateWorkStatus("🔍 Ищу информацию...")
+            updateWorkStatus(context.getString(com.pai.android.R.string.work_status_thinking))
             val enhancedContext = buildEnhancedContext(chatId, query)
             
             // Отправляем запрос к AI с системным промптом, расширенным контекстом и вложениями
-            updateWorkStatus("🧠 Думаю...")
+            updateWorkStatus(context.getString(com.pai.android.R.string.work_status_thinking))
             val result = aiRepository.sendMessageWithAttachments(
                 messages = allMessages,
                 attachments = attachments,
@@ -1402,7 +1402,7 @@ class ChatDetailViewModel @Inject constructor(
             
             println("🧠 DecisionEngine: обрабатываю запрос через AI")
             
-            updateWorkStatus("🤔 Анализирую запрос...")
+            updateWorkStatus(this.context.getString(com.pai.android.R.string.work_status_analyzing))
             
             // Get user's file attachments
             val userAttachments = if (directAttachments.isNotEmpty()) {
@@ -1458,7 +1458,7 @@ class ChatDetailViewModel @Inject constructor(
                 context = context,
                 fileAttachments = userAttachments
             )
-            updateWorkStatus("🧠 Думаю...")
+            updateWorkStatus(this.context.getString(com.pai.android.R.string.work_status_thinking))
             
             when (response) {
                 is com.pai.android.agent.AgentResponse.Success -> {

@@ -591,4 +591,19 @@
     <string name="provider_name_openai">OpenAI</string>
     <string name="provider_name_ollama">Ollama</string>
 
+    <!-- Permissions screen -->
+    <string name="settings_permissions">Permissions</string>
+    <string name="settings_permissions_desc">Manage app permissions (notifications, location, microphone)</string>
+
+    <!-- Work status messages -->
+    <string name="work_status_analyzing">🧠 Analyzing query…</string>
+    <string name="work_status_thinking">🧠 Thinking…</string>
+    <string name="work_status_preparing">🧠 Preparing reply…</string>
+    <string name="work_status_searching">🔍 Searching…</string>
+
+    <!-- Smart Router status -->
+    <string name="hybrid_threshold_label">Complexity threshold: %d (1-%d → local, %d-10 → network)</string>
+    <string name="smart_router_status_on">Smart Router: on</string>
+    <string name="smart_router_status_off">Smart Router: off</string>
+
 </resources>
