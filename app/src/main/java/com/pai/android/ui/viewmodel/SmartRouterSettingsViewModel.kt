@@ -27,6 +27,7 @@ data class SmartRouterUiState(
     val routeMultimodalToLocal: Boolean = true,
     val enableFallback: Boolean = true,
     val enableHybrid: Boolean = false,
+    val hybridThreshold: Int = 4,
     val saved: Boolean = false
 )
 
@@ -67,7 +68,8 @@ class SmartRouterSettingsViewModel @Inject constructor(
                 maxLocalTokens = routerConfig.maxLocalTokens,
                 routeMultimodalToLocal = routerConfig.routeMultimodalToLocal,
                 enableFallback = routerConfig.enableFallback,
-                enableHybrid = routerConfig.enableHybrid
+                enableHybrid = routerConfig.enableHybrid,
+                hybridThreshold = routerConfig.hybridThreshold
             )
         }
     }
@@ -146,7 +148,15 @@ class SmartRouterSettingsViewModel @Inject constructor(
     fun setEnableHybrid(value: Boolean) {
         _uiState.value = _uiState.value.copy(enableHybrid = value)
         viewModelScope.launch {
-            val cfg = repository.get().copy(enableHybrid = value)
+            val cfg = repository.get().copy(enableHybrid = value, hybridThreshold = _uiState.value.hybridThreshold)
+            repository.save(cfg)
+        }
+    }
+
+    fun setHybridThreshold(value: Int) {
+        _uiState.value = _uiState.value.copy(hybridThreshold = value)
+        viewModelScope.launch {
+            val cfg = repository.get().copy(hybridThreshold = value)
             repository.save(cfg)
         }
     }
@@ -162,7 +172,8 @@ class SmartRouterSettingsViewModel @Inject constructor(
                     maxLocalTokens = s.maxLocalTokens,
                     routeMultimodalToLocal = s.routeMultimodalToLocal,
                     enableFallback = s.enableFallback,
-                    enableHybrid = s.enableHybrid
+                    enableHybrid = s.enableHybrid,
+                    hybridThreshold = s.hybridThreshold
                 )
             )
             _uiState.value = _uiState.value.copy(saved = true)

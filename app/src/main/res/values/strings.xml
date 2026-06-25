@@ -115,6 +115,16 @@
     <string name="settings_permissions">Разрешения</string>
     <string name="settings_permissions_desc">Управление разрешениями приложения (уведомления, геолокация, микрофон)</string>
 
+    <!-- Work status messages (дублируются в коде ChatDetailViewModel) -->
+    <string name="work_status_analyzing">🧠 Анализирую запрос…</string>
+    <string name="work_status_thinking">🧠 Думаю…</string>
+    <string name="work_status_preparing">🧠 Готовлю ответ…</string>
+    <string name="work_status_searching">🔍 Ищу информацию…</string>
+
+    <!-- Smart Router status -->
+    <string name="smart_router_status_on">Smart Router: вкл</string>
+    <string name="smart_router_status_off">Smart Router: выкл</string>
+
     <!-- Smart Router -->
     <string name="settings_smart_router">Smart Router</string>
     <string name="settings_smart_router_desc">Распределение запросов между локальной и сетевой моделью</string>
@@ -128,6 +138,8 @@
     <string name="smart_router_multimodal">Мультимодальные → локалка</string>
     <string name="smart_router_fallback">Фолбэк на локалку при ошибке</string>
     <string name="smart_router_hybrid">Гибридный режим (экспериментальный)</string>
+    <string name="smart_router_hybrid_threshold_label">Порог сложности: %d</string>
+    <string name="hybrid_threshold_label">Порог сложности: %d (1-%d → локальная, %d-10 → сетевая)</string>
     <string name="smart_router_saved">✅ Настройки сохранены</string>
     <string name="smart_router_save">Сохранить</string>
     <string name="smart_router_network_model">Сетевая модель</string>

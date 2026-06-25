@@ -122,17 +122,27 @@ class SmartRouter @Inject constructor(
             return RouteDecision.Local(prompt)
         }
 
-        // 1c. Длинный контекст → сеть
+        // 1c. Длинный контекст → сеть (или гибрид, если включён)
         if (contextTokens > LONG_CONTEXT_THRESHOLD) {
-            println("🔧 SmartRouter: 1c → NETWORK (long context: $contextTokens)")
-            return RouteDecision.Network(config.networkProviderSettingsId)
+            if (config.enableHybrid) {
+                println("🔧 SmartRouter: 1c → HYBRID (long context: $contextTokens)")
+                return RouteDecision.Hybrid(prompt)
+            } else {
+                println("🔧 SmartRouter: 1c → NETWORK (long context: $contextTokens)")
+                return RouteDecision.Network(config.networkProviderSettingsId)
+            }
         }
 
-        // 1d. Ключевые слова-триггеры → сеть
+        // 1d. Ключевые слова-триггеры → сеть (или гибрид, если включён)
         val lowerPrompt = prompt.lowercase()
         if (NETWORK_TRIGGERS.any { lowerPrompt.contains(it) }) {
-            println("🔧 SmartRouter: 1d → NETWORK (keyword trigger)")
-            return RouteDecision.Network(config.networkProviderSettingsId)
+            if (config.enableHybrid) {
+                println("🔧 SmartRouter: 1d → HYBRID (keyword trigger, hybrid mode on)")
+                return RouteDecision.Hybrid(prompt)
+            } else {
+                println("🔧 SmartRouter: 1d → NETWORK (keyword trigger)")
+                return RouteDecision.Network(config.networkProviderSettingsId)
+            }
         }
 
         // === ШАГ 2: LLM-классификация (~100-150 токенов к локалке) ===
@@ -148,11 +158,21 @@ class SmartRouter @Inject constructor(
                 }
                 else -> {
                     println("🔧 SmartRouter: 2 → NETWORK (complexity $complexity > ${config.complexityThreshold})")
-                    RouteDecision.Network(config.networkProviderSettingsId)
+                    if (config.enableHybrid) {
+                        println("🔧 SmartRouter: 2 → HYBRID (complex $complexity > ${config.complexityThreshold})")
+                        RouteDecision.Hybrid(prompt)
+                    } else {
+                        RouteDecision.Network(config.networkProviderSettingsId)
+                    }
                 }
             }
         }
 
+        // Если не удалось выполнить LLM-классификацию (модель не загружена)
+        if (config.enableHybrid) {
+            println("🔧 SmartRouter: local not loaded, but hybrid enabled → HYBRID")
+            return RouteDecision.Hybrid(prompt)
+        }
         println("🔧 SmartRouter: local not loaded → NETWORK")
         return RouteDecision.Network(config.networkProviderSettingsId)
     }

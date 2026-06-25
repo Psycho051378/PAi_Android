@@ -492,7 +492,7 @@ fun ChatDetailScreen(
                         modifier = Modifier.padding(top = 1.dp)
                     ) {
                         val routerColor = if (state.smartRouterEnabled) Color(0xFF43A047) else Color(0xFFE53935)
-                        val routerText = if (state.smartRouterEnabled) "Smart Router: вкл" else "Smart Router: выкл"
+                        val routerText = if (state.smartRouterEnabled) stringResource(R.string.smart_router_status_on) else stringResource(R.string.smart_router_status_off)
                         Text(
                             text = "● ",
                             fontSize = 8.sp,
