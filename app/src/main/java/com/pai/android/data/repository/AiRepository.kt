@@ -554,6 +554,7 @@ class AiRepository @Inject constructor(
         attachments: List<Attachment> = emptyList()
     ): Result<AiResponse> {
         val modelName = settings.localModelName.ifBlank { settings.modelName ?: "gemma-4-e2b" }
+        com.pai.android.agent.DecisionEngine.processingModelName = modelName
         
         try {
             // Загружаем модель, если ещё не загружена
@@ -1146,6 +1147,7 @@ class AiRepository @Inject constructor(
                 return null
             }
             println("🔧 Fallback: отправляем на LiteRT (${local.getEffectiveModel()})")
+            com.pai.android.agent.DecisionEngine.processingModelName = local.getEffectiveModel()
             return handleLocalInference(
                 settings = local,
                 messages = listOf(com.pai.android.data.model.Message.createAssistantMessage("fallback", "")),
