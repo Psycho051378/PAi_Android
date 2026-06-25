@@ -343,7 +343,11 @@ class AiRepository @Inject constructor(
                             }
                         }
                         is com.pai.android.agent.RouteDecision.Fallback -> {
-                            println("🔧 SmartRouter: FALLBACK - ${decision.reason}")
+                            println("🔧 SmartRouter: FALLBACK - ${decision.reason}, пробуем локальную модель")
+                            val localFallbackResult = trySendToLocal()
+                            if (localFallbackResult != null) {
+                                return@withContext localFallbackResult
+                            }
                             return@withContext Result.failure(Exception(decision.reason))
                         }
                         else -> {}
@@ -736,7 +740,11 @@ class AiRepository @Inject constructor(
                 planResponse.body()?.getContent() ?: ""
             } else {
                 val errorBody = planResponse.errorBody()?.string() ?: planResponse.message()
-                println("🔧 Hybrid: планирование не удалось (HTTP ${planResponse.code()}: $errorBody), fallback")
+                println("🔧 Hybrid: планирование не удалось (HTTP ${planResponse.code()}: $errorBody), пробуем локалку")
+                val localPlan = trySendToLocal()
+                if (localPlan != null) {
+                    return localPlan
+                }
                 return sendMessage(
                     messages = messages,
                     providerSettings = settings,
@@ -1120,6 +1128,33 @@ class AiRepository @Inject constructor(
         }
         
         return result
+    }
+
+    /**
+     * Пытается отправить запрос на локальную модель (LiteRT).
+     * Используется как fallback при недоступности сети.
+     */
+    private suspend fun trySendToLocal(): Result<AiResponse>? {
+        try {
+            val local = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT).firstOrNull()
+            if (local == null || !local.isValid()) {
+                println("🔧 Fallback: LiteRT не настроен")
+                return null
+            }
+            if (!localAiInteraction.isLoaded()) {
+                println("🔧 Fallback: LiteRT не загружена")
+                return null
+            }
+            println("🔧 Fallback: отправляем на LiteRT (${local.getEffectiveModel()})")
+            return handleLocalInference(
+                settings = local,
+                messages = listOf(com.pai.android.data.model.Message.createAssistantMessage("fallback", "")),
+                systemPrompt = null
+            )
+        } catch (e: Exception) {
+            println("🔧 Fallback: ошибка: ${e.message}")
+            return null
+        }
     }
 
     /** Безопасно получает текст из content (строка или массив). */
