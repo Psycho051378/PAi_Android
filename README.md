@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0+-purple.svg)](https://kotlinlang.org)
-[![Platform](https://img.shields.io/badge/Android-14%2B-green.svg)](https://developer.android.com)
+[![Platform](https://img.shields.io/badge/Android-7.0%2B-green.svg)](https://developer.android.com)
 
 **PAi Android** is a full-featured AI agent running natively on Android. Unlike cloud chatbots or simplified wrappers, PAi is a complete autonomous agent with its own decision engine, tool system, skill store, memory, scheduler, and proactive capabilities.
 
@@ -15,8 +15,8 @@
 ### 🧠 Agent Core
 - **ReAct decision loop** — Gather context → Execute tools → Respond, all driven by LLM
 - **Multi-provider AI** — DeepSeek, OpenAI, OpenRouter, Ollama, Custom endpoints
-- **Smart Router** — Hybrid mode: DeepSeek plans complex queries, delegates simple sub-steps to local models (Gemma, Qwen via mlc-llm or exec), DeepSeek compiles results
-- **Local AI providers** — Llama.cpp, Gemma, Qwen running on-device for fast, free inference on short tasks
+- **Smart Router** — Routes queries between cloud and local AI based on complexity threshold; hybrid mode (cloud plans + local executes sub-steps) is in development
+- **Local AI providers** — Ollama (on-device/network), Qwen models via LocalAiInteraction for fast, free inference on short tasks
 - **Deterministic router** — Fast command routing without LLM for common intents
 - **Task queue** — Sequential async execution with auto-approval for long tasks
 - **Code generation** — Generate and execute Python code from plain text queries
@@ -83,7 +83,7 @@ You can download the latest debug APK directly:
 
 | File | Size | Android | Build |
 |------|------|---------|-------|
-| [`PAi_Android-debug.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v1.0.0-alpha/PAi_Android-debug.apk) | ~161 MB | 14+ (API 24) | Debug |
+| [`PAi_Android-debug.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v1.0.0-alpha/PAi_Android-debug.apk) | ~161 MB | 7.0+ (API 24) | Debug |
 
 > ⚠️ This is a **debug build** — requires `Install from unknown apps` permission.
 > For a release build, clone the repo and run `./gradlew assembleRelease`.
@@ -94,18 +94,10 @@ You can download the latest debug APK directly:
 
 ### Prerequisites
 
-**⚠️ Important: JDK 17 is REQUIRED.**
-
-The project uses Android Gradle Plugin 8.2.0 which is **not compatible with JDK 21+** (including JetBrains Runtime 23 bundled with recent Android Studio).
-
-- **JDK 17** — Download from [Eclipse Adoptium](https://adoptium.net/temurin/releases/?version=17)
+- **JDK 17+** — Download from [Eclipse Adoptium](https://adoptium.net/temurin/releases/?version=17)
 - Android Studio Hedgehog (2023.1.1+) or later
-- Android SDK 34+
-- A physical device or emulator running Android 14+
-
-> **Windows users:** If you get a `jlink.exe` error during build, go to
-> `File → Settings → Build, Execution, Deployment → Build Tools → Gradle`
-> and set **Gradle JDK** to your JDK 17 installation.
+- Android SDK 35+
+- A physical device or emulator running Android 7.0+ (API 24)
 
 ### Build & Install
 
@@ -114,7 +106,7 @@ The project uses Android Gradle Plugin 8.2.0 which is **not compatible with JDK 
 git clone https://github.com/Psycho051378/PAi_Android.git
 cd pai-android
 
-# Build debug APK
+# Build debug APK (Windows: use gradlew.bat or .\gradlew)
 ./gradlew assembleDebug
 
 # Or build and install directly
@@ -146,13 +138,13 @@ The app supports multiple AI backends. API keys are stored locally and never sen
 | OpenAI | `gpt-3.5-turbo` | ✅ | [platform.openai.com](https://platform.openai.com) |
 | OpenRouter | `openrouter/free` | ✅ | [openrouter.ai](https://openrouter.ai) |
 | Ollama | `llama2` | ❌ | Runs locally on device/network |
-| Local AI | `llama.cpp`, `gemma`, `qwen` | ❌ | On-device inference via mlc-llm or exec |
+| Local AI | `qwen3` | ❌ | On-device inference via local exec |
 
 Smart Router can be configured in **Settings → Smart Router**:
-- Toggle hybrid mode on/off
-- Set complexity threshold for cloud routing
+- Toggle routing on/off
+- Set complexity threshold for cloud vs local routing
 - Configure fallback to local model on network errors
-- Multimodal queries can be routed to local models
+- Hybrid mode (cloud plans + local executes sub-steps) — in development
 
 ### Skills
 External skills can be installed from the built-in Skill Store. Skills are fetched from a remote manifest and executed on-device.
@@ -165,12 +157,16 @@ External skills can be installed from the built-in Skill Store. Skills are fetch
 com.pai.android/
 ├── agent/
 │   ├── DecisionEngine.kt      # Main decision loop (ReAct)
+│   ├── SmartRouter.kt         # Cloud vs local query routing
+│   ├── LocalAiInteraction.kt  # On-device model inference
+│   ├── ContextEngine.kt       # Device context (location, battery, notifications)
+│   ├── ProactiveTrigger.kt    # Proactive suggestions & automation
 │   ├── TaskScheduler.kt       # Cron-like task scheduling
 │   ├── tools/                  # Tool implementations (fetch, codegen, location...)
 │   ├── skills/                 # Built-in skills (email, sms, call, weather...)
 │   └── SkillRegistry.kt       # Central skill management
 ├── data/
-│   ├── local/                  # Room database, DAOs
+│   ├── local/                  # Room database, DAOs, local models
 │   ├── model/                  # Data models
 │   ├── repository/             # Data repositories
 │   └── detector/               # Intent/fact detection
@@ -180,7 +176,7 @@ com.pai.android/
 │   ├── components/             # Reusable UI components
 │   └── navigation/             # Navigation graph
 ├── di/                         # Hilt dependency injection
-└── service/                    # Background services
+└── service/                    # Background services, NotificationListener
 ```
 
 ---
