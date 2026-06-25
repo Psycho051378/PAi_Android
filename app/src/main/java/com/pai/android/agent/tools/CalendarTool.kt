@@ -92,7 +92,15 @@ class CalendarTool @Inject constructor(
 
     private val dateFormat = SimpleDateFormat("EE, dd MMM yyyy HH:mm", Locale("ru"))
 
-    override suspend fun execute(params: Map<String, Any>): ToolResult {
+    override suspend fun execute(rawParams: Map<String, Any>): ToolResult {
+        // Нормализуем ключи — LLM каждый раз выдумывает новые названия
+        val params = rawParams.toMutableMap()
+        if (params.containsKey("summary") && !params.containsKey("title")) params["title"] = params["summary"]!!
+        if (params.containsKey("start_datetime") && !params.containsKey("start_time")) params["start_time"] = params["start_datetime"]!!
+        if (params.containsKey("start") && !params.containsKey("start_time")) params["start_time"] = params["start"]!!
+        if (params.containsKey("end_datetime") && !params.containsKey("end_time")) params["end_time"] = params["end_datetime"]!!
+        if (params.containsKey("end") && !params.containsKey("end_time")) params["end_time"] = params["end"]!!
+        
         val action = params["action"]?.toString() ?: "list_upcoming"
 
         return when (action) {
@@ -249,7 +257,7 @@ class CalendarTool @Inject constructor(
             )
         }
 
-        val eventId = params["event_id"] as? Number
+        val eventId = (params["event_id"] as? Number) ?: params["event_id"]?.toString()?.toLongOrNull()
         if (eventId == null) {
             return ToolResult.Error(error = "Укажите event_id для чтения события")
         }
@@ -326,7 +334,7 @@ class CalendarTool @Inject constructor(
             )
         }
 
-        val title = params["query"]?.toString() ?: params["title"]?.toString() ?: ""
+        val title = params["query"]?.toString() ?: params["title"]?.toString() ?: params["summary"]?.toString() ?: ""
         if (title.isBlank()) {
             return ToolResult.Error(error = "Укажите название события (query или title)")
         }
@@ -335,8 +343,12 @@ class CalendarTool @Inject constructor(
         val location = params["location"]?.toString() ?: ""
 
         val startTime = parseEventTime(params)
-        val endTime = (params["end_time"] as? Number)?.toLong()
-            ?: (startTime + 60 * 60 * 1000) // +1 час по умолчанию
+        fun parseEndTime(key: String): Long? = (params[key] as? Number)?.toLong()
+            ?: try { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).parse(params[key]?.toString())?.time } catch (_: Exception) { null }
+            ?: try { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(params[key]?.toString())?.time } catch (_: Exception) { null }
+            ?: try { SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US).parse(params[key]?.toString())?.time } catch (_: Exception) { null }
+            ?: try { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).parse(params[key]?.toString())?.time } catch (_: Exception) { null }
+        val endTime = parseEndTime("end_time") ?: parseEndTime("end_datetime") ?: parseEndTime("end") ?: (startTime + 60 * 60 * 1000)
 
         val calendarId = getPrimaryCalendarId()
         if (calendarId == null) {
@@ -405,7 +417,7 @@ class CalendarTool @Inject constructor(
             )
         }
 
-        val eventId = params["event_id"] as? Number
+        val eventId = (params["event_id"] as? Number) ?: params["event_id"]?.toString()?.toLongOrNull()
         if (eventId == null) {
             return ToolResult.Error(error = "Укажите event_id для удаления события")
         }
@@ -565,11 +577,22 @@ class CalendarTool @Inject constructor(
     private fun parseEventTime(params: Map<String, Any>): Long {
         // 1. Прямой timestamp
         val explicitTime = (params["start_time"] as? Number)?.toLong()
+            ?: (params["start_datetime"] as? Number)?.toLong()
         if (explicitTime != null) return explicitTime
 
         val now = Calendar.getInstance()
 
-        // 2. date + time строки
+        // 2. ISO/date формат от DecisionEngine
+        val startDateStr = params["start_time"]?.toString() ?: params["start_datetime"]?.toString() ?: params["start"]?.toString()
+        if (startDateStr != null) {
+            val formats = listOf("yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm")
+            for (fmt in formats) try {
+                val parsed = SimpleDateFormat(fmt, Locale.US).parse(startDateStr)
+                if (parsed != null) return parsed.time
+            } catch (_: Exception) {}
+        }
+
+        // 3. date + time строки
         val dateStr = params["date"]?.toString()
         val timeStr = params["time"]?.toString()
         if (dateStr != null) {

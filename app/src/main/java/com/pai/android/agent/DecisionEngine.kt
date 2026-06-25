@@ -770,7 +770,7 @@ class DecisionEngine @Inject constructor(
                             "contacts" -> skillRegistry.getSkill("contacts")
                             "sms" -> skillRegistry.getSkill("sms")
                             "call" -> skillRegistry.getSkill("call")
-                            "calendar" -> skillRegistry.getSkill("calendar")
+                            "calendar" -> skillRegistry.getSkill("calendar") ?: toolRegistry.getTool("calendar")?.let { ToolSkillAdapter(it) }
                             "geo" -> skillRegistry.getSkill("geo")
                             "clipboard" -> skillRegistry.getSkill("clipboard")
                             "task_scheduler" -> skillRegistry.getSkill("task_scheduler")
@@ -787,7 +787,7 @@ class DecisionEngine @Inject constructor(
                                 val chatResp = aiRepository.sendMessage(
                                     messages = listOf(Message.createUserMessage("plan_step_$stepIdx", chatPrompt)),
                                     systemPrompt = "You are executing a step in a multi-step plan. Reply helpfully.",
-                                    memoryContext = context
+                                    memoryContext = combinedContext
                                 )
                                 val chatText = chatResp.getOrThrow().text
                                 if (step.outputVariable != null) results[step.outputVariable!!] = chatText
@@ -957,7 +957,7 @@ class DecisionEngine @Inject constructor(
         "location" to "tool_location",
         "get_context" to "tool_get_context",
         "clipboard" to "tool_clipboard",
-        "calendar" to "tool_calendar",
+        "calendar" to "calendar",
         "office" to "office",
         "pptx" to "office",
         "powerpoint" to "office",
@@ -2283,6 +2283,20 @@ class DecisionEngine @Inject constructor(
                 val skill = skillRegistry.getSkill("open_file")
                 if (skill != null) skill.execute(step.params)
                 else SkillResult.Error(message = "Навык open_file не найден")
+            }
+            "calendar" -> {
+                val skill = skillRegistry.getSkill("calendar")
+                println("?? executePlanStep: calendar skill=" + (skill != null))
+                if (skill != null) {
+                    val result = skill.execute(step.params)
+                    println("?? executePlanStep: calendar result=" + result.toString().take(300))
+                    result
+                } else SkillResult.Error(message = "Навык calendar не найден")
+            }
+            "app_launch" -> {
+                val skill = skillRegistry.getSkill("app_launch")
+                if (skill != null) skill.execute(step.params)
+                else SkillResult.Error(message = "Навык app_launch не найден")
             }
             else -> {
                 val skill = skillRegistry.getSkill(step.skillName) ?: toolRegistry.getTool(step.skillName)?.let { ToolSkillAdapter(it) }

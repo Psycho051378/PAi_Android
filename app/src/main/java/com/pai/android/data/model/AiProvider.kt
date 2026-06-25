@@ -51,6 +51,17 @@ enum class AiProvider(
         )
     ),
     
+    LITE_RT(
+        displayName = "Локально (LiteRT)",
+        defaultBaseUrl = "",
+        defaultModel = "gemma-4-e2b",
+        requiresApiKey = false,
+        availableModels = listOf(
+            "gemma-4-e2b",
+            "gemma-4-e4b"
+        )
+    ),
+
     OLLAMA(
         displayName = "Ollama",
         defaultBaseUrl = "http://10.0.2.2:11434/", // Для эмулятора Android
