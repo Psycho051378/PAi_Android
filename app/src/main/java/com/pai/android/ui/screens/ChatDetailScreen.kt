@@ -456,33 +456,54 @@ fun ChatDetailScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
         ) {
-            // Индикатор контекста
+            // Индикатор контекста + Smart Router статус
             if (state.contextUsagePercent != null) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                    verticalAlignment = UiAlignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 2.dp)
                 ) {
-                    LinearProgressIndicator(
-                        progress = (state.contextUsagePercent ?: 0) / 100f,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = when {
-                            state.contextUsagePercent!! > 85 -> Color(0xFFE53935) // Красный
-                            state.contextUsagePercent!! > 60 -> Color(0xFFFB8C00) // Оранжевый
-                            else -> Color(0xFF43A047) // Зелёный
-                        },
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    Text(
-                        text = state.contextLabel,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
+                    Row(
+                        verticalAlignment = UiAlignment.CenterVertically
+                    ) {
+                        LinearProgressIndicator(
+                            progress = (state.contextUsagePercent ?: 0) / 100f,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = when {
+                                state.contextUsagePercent!! > 85 -> Color(0xFFE53935) // Красный
+                                state.contextUsagePercent!! > 60 -> Color(0xFFFB8C00) // Оранжевый
+                                else -> Color(0xFF43A047) // Зелёный
+                            },
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Text(
+                            text = state.contextLabel,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    // Индикатор Smart Router
+                    Row(
+                        verticalAlignment = UiAlignment.CenterVertically,
+                        modifier = Modifier.padding(top = 1.dp)
+                    ) {
+                        val routerColor = if (state.smartRouterEnabled) Color(0xFF43A047) else Color(0xFFE53935)
+                        val routerText = if (state.smartRouterEnabled) "Smart Router: вкл" else "Smart Router: выкл"
+                        Text(
+                            text = "● ",
+                            fontSize = 8.sp,
+                            color = routerColor
+                        )
+                        Text(
+                            text = routerText,
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
             
@@ -651,13 +672,24 @@ fun ChatDetailScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = state.workStatus,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column {
+                            Text(
+                                text = state.workStatus,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (state.activeModelName.isNotBlank()) {
+                                Text(
+                                    text = state.activeModelName,
+                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
                 

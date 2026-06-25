@@ -2614,6 +2614,14 @@ class DecisionEngine @Inject constructor(
         /** Статус текущей обработки (переживает навигацию) */
         @Volatile
         var processingWorkStatus: String? = null
+
+        /** Название модели, которая сейчас обрабатывает запрос */
+        @Volatile
+        var processingModelName: String? = null
+
+        /** Включён ли Smart Router */
+        @Volatile
+        var processingSmartRouterEnabled: Boolean = false
     }
 }
 

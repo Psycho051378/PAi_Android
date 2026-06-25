@@ -60,9 +60,13 @@ class AiRepository @Inject constructor(
                 println("❌ AiRepository.sendMessage: нет валидных настроек провайдера")
                 return@withContext Result.failure(IllegalStateException("No valid AI provider configured"))
             }
+
+            // Обновляем информацию о текущей модели для UI
+            com.pai.android.agent.DecisionEngine.processingModelName = modelOverride ?: settings.getEffectiveModel()
             
             // === Smart Router: только для запросов без явного провайдера ===
             val routerConfig = smartRouterRepository.get()
+            com.pai.android.agent.DecisionEngine.processingSmartRouterEnabled = routerConfig.enabled
             if (providerSettings == null && routerConfig.enabled) {
                 // Извлекаем чистый запрос пользователя (без технического контекста)
                 val lastMsg = messages.lastOrNull { it.isFromUser() }
