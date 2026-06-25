@@ -35,6 +35,7 @@ class SmartRouterRepository @Inject constructor(
         private val ROUTE_MULTIMODAL_TO_LOCAL_KEY = booleanPreferencesKey("route_multimodal_to_local")
         private val ENABLE_FALLBACK_KEY = booleanPreferencesKey("enable_fallback")
         private val ENABLE_HYBRID_KEY = booleanPreferencesKey("enable_hybrid")
+        private val HYBRID_THRESHOLD_KEY = intPreferencesKey("hybrid_threshold")
     }
 
     /** Наблюдаемый поток конфига */
@@ -46,7 +47,8 @@ class SmartRouterRepository @Inject constructor(
             maxLocalTokens = prefs[MAX_LOCAL_TOKENS_KEY] ?: 512,
             routeMultimodalToLocal = prefs[ROUTE_MULTIMODAL_TO_LOCAL_KEY] ?: true,
             enableFallback = prefs[ENABLE_FALLBACK_KEY] ?: true,
-            enableHybrid = prefs[ENABLE_HYBRID_KEY] ?: false
+            enableHybrid = prefs[ENABLE_HYBRID_KEY] ?: false,
+            hybridThreshold = prefs[HYBRID_THRESHOLD_KEY] ?: 4
         )
     }
 
@@ -63,6 +65,7 @@ class SmartRouterRepository @Inject constructor(
             prefs[ROUTE_MULTIMODAL_TO_LOCAL_KEY] = cfg.routeMultimodalToLocal
             prefs[ENABLE_FALLBACK_KEY] = cfg.enableFallback
             prefs[ENABLE_HYBRID_KEY] = cfg.enableHybrid
+            prefs[HYBRID_THRESHOLD_KEY] = cfg.hybridThreshold
         }
     }
 
