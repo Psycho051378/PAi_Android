@@ -1,4 +1,4 @@
-﻿package com.pai.android.agent
+package com.pai.android.agent
 
 import com.pai.android.data.model.Message
 import com.pai.android.data.repository.AiRepository
@@ -723,6 +723,17 @@ class DecisionEngine @Inject constructor(
                     var planAnswer = StringBuilder()
                     var mainContent: String? = null  // main response content (e.g. from ai_chat)
 
+                    val planExecutionLog = StringBuilder()
+
+                    fun buildEnrichedContext(): String = buildString {
+                        if (combinedContext.isNotBlank()) appendLine(combinedContext)
+                        if (planExecutionLog.isNotEmpty()) {
+                            appendLine()
+                            appendLine("=== Результаты выполненных шагов ===")
+                            append(planExecutionLog.toString().trimEnd())
+                        }
+                    }.trimEnd()
+
                     for ((stepIdx, step) in plan.steps.withIndex()) {
                         println("▶️ Plan step ${stepIdx + 1}/${plan.steps.size}: ${step.description}")
                         
@@ -787,7 +798,8 @@ class DecisionEngine @Inject constructor(
                                 val chatResp = aiRepository.sendMessage(
                                     messages = listOf(Message.createUserMessage("plan_step_$stepIdx", chatPrompt)),
                                     systemPrompt = "You are executing a step in a multi-step plan. Reply helpfully.",
-                                    memoryContext = combinedContext
+                                    memoryContext = buildEnrichedContext(),
+                                    planExecuted = true
                                 )
                                 val chatText = chatResp.getOrThrow().text
                                 if (step.outputVariable != null) results[step.outputVariable!!] = chatText
@@ -835,6 +847,8 @@ class DecisionEngine @Inject constructor(
                                     val resultKey = step.outputVariable ?: "step${stepIdx}_result"
                                     results[resultKey] = resultPath.ifBlank { resultText }
                                     if (resultPath.isNotBlank()) results["${resultKey}_path"] = resultPath
+                                    // Добавляем в enriched context для последующих ai_chat шагов
+                                    planExecutionLog.appendLine("Шаг ${stepIdx + 1} (${step.skillName}): ${resultText.take(3000)}")
                                 }
                                 is SkillResult.Error -> {
                                     planError = "${skillName}: ${result.message}"
@@ -899,7 +913,8 @@ class DecisionEngine @Inject constructor(
                     return@withContext AgentResponse.Success(
                         answer = finalAnswerTrimmed,
                         thoughts = listOf("plan executed (${plan.steps.size} steps): ${plan.reasoning}"),
-                        actions = emptyList()
+                        actions = emptyList(),
+                        planExecuted = true
                     )
                 }
 

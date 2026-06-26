@@ -157,67 +157,88 @@ class WebSearchService @Inject constructor(
     }
     
     /**
-     * Выполняет поиск через DuckDuckGo (использует публичное API).
-     * DuckDuckGo не требует API ключа, но имеет ограничения по запросам.
+     * Выполняет поиск через DuckDuckGo (HTML fallback).
+     * DuckDuckGo не требует API ключа. Парсит HTML-страницу результатов.
      */
     private suspend fun performDuckDuckGoSearch(
         query: String,
         maxResults: Int
     ): List<SearchResult> {
-        // DuckDuckGo Instant Answer API
-        val url = "https://api.duckduckgo.com/?q=${query.encodeURL()}&format=json&no_html=1&skip_disambig=1"
+        val encodedQuery = query.encodeURL()
+        val urls = listOf(
+            "https://html.duckduckgo.com/html/?q=$encodedQuery",
+            "https://lite.duckduckgo.com/lite/?q=$encodedQuery"
+        )
         
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", USER_AGENT)
-            .build()
-        
-        val response = okHttpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            return emptyList()
-        }
-        
-        val json = response.body?.string() ?: return emptyList()
-        val jsonObject = JSONObject(json)
-        
-        val results = mutableListOf<SearchResult>()
-        
-        // Извлекаем Abstract (краткое описание)
-        val abstract = jsonObject.optString("Abstract")
-        val abstractUrl = jsonObject.optString("AbstractURL")
-        val abstractSource = jsonObject.optString("AbstractSource")
-        
-        if (abstract.isNotEmpty() && abstractUrl.isNotEmpty()) {
-            results.add(SearchResult(
-                title = abstractSource,
-                link = abstractUrl,
-                snippet = abstract,
-                source = "DuckDuckGo"
-            ))
-        }
-        
-        // Извлекаем RelatedTopics (похожие темы)
-        val relatedTopics = jsonObject.optJSONArray("RelatedTopics")
-        if (relatedTopics != null) {
-            for (i in 0 until relatedTopics.length()) {
-                val topic = relatedTopics.getJSONObject(i)
-                val text = topic.optString("Text", "")
-                val url = topic.optString("FirstURL", "")
+        for (urlStr in urls) {
+            try {
+                val request = Request.Builder()
+                    .url(urlStr)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .header("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Referer", "https://duckduckgo.com/")
+                    .build()
                 
-                if (text.isNotEmpty() && url.isNotEmpty()) {
-                    // Разделяем текст на заголовок и сниппет
-                    val parts = text.split(" - ", limit = 2)
-                    val title = if (parts.size > 1) parts[0] else ""
-                    val snippet = if (parts.size > 1) parts[1] else text
-                    
-                    results.add(SearchResult(title, url, snippet, "DuckDuckGo"))
-                    
-                    if (results.size >= maxResults) break
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) continue
+                
+                val html = response.body?.string() ?: continue
+                if (html.contains("captcha", ignoreCase = true)) {
+                    println("WebSearchService: DDG captcha, пробую другой URL")
+                    continue
                 }
+                
+                // Парсим HTML: ищем заголовки и сниппеты
+                val results = mutableListOf<SearchResult>()
+                
+                // DDG HTML структура: <a class="result__a"...>заголовок</a>
+                // <a class="result__snippet"...>сниппет</a>
+                val titlePattern = Regex(
+                    """<a\s+[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>""",
+                    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+                )
+                val snippetPattern = Regex(
+                    """<a\s+[^>]*class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</a>""",
+                    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+                )
+                
+                val titleMatches = titlePattern.findAll(html).toList()
+                val snippetMatches = snippetPattern.findAll(html).toList()
+                
+                for (i in 0 until minOf(titleMatches.size, maxResults)) {
+                    var url = titleMatches[i].groupValues[1].trim()
+                    val title = titleMatches[i].groupValues[2].trim().replace(Regex("<[^>]+>"), "")
+                    val snippet = snippetMatches.getOrNull(i)?.groupValues?.getOrNull(1)
+                        ?.trim()?.replace(Regex("<[^>]+>"), "") ?: ""
+                    
+                    // Очищаем URL от DDG редиректов
+                    val uddgMatch = Regex("""uddg=([^&]+)""").find(url)
+                    if (uddgMatch != null) {
+                        url = java.net.URLDecoder.decode(uddgMatch.groupValues[1], "UTF-8")
+                    }
+                    
+                    if (url.isNotEmpty() && !url.contains("duckduckgo.com")) {
+                        results.add(SearchResult(
+                            title = title.ifEmpty { "Результат ${i + 1}" },
+                            link = url,
+                            snippet = snippet,
+                            source = "DuckDuckGo"
+                        ))
+                    }
+                }
+                
+                if (results.isNotEmpty()) {
+                    println("WebSearchService: DDG HTML дал ${results.size} результатов")
+                    return results
+                }
+            } catch (e: Exception) {
+                println("WebSearchService: DDG HTML ошибка: ${e.message}, пробую другой URL")
             }
         }
         
-        return results
+        println("WebSearchService: DDG HTML не дал результатов")
+        return emptyList()
     }
     
     /**

@@ -561,7 +561,8 @@ sealed class AgentResponse {
         val answer: String,
         val thoughts: List<String>,
         val actions: List<ActionResult>,
-        val attachments: List<com.pai.android.data.model.Attachment> = emptyList()
+        val attachments: List<com.pai.android.data.model.Attachment> = emptyList(),
+        val planExecuted: Boolean = false
     ) : AgentResponse()
 
     data class Error(

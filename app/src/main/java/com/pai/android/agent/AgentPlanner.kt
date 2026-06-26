@@ -90,7 +90,7 @@ class AgentPlanner @Inject constructor(
         }
 
         // Сложный запрос - просим DeepSeek распланировать
-        return try {
+        try {
             println("🧠 $TAG: запрашиваю план для '$query'")
             val prompt = buildPlanPrompt(query, context)
 
@@ -102,12 +102,33 @@ class AgentPlanner @Inject constructor(
                 memoryContext = ""
             )
 
-            parsePlan(response.getOrThrow().text, query)
+            val plan = parsePlan(response.getOrThrow().text, query)
+            
+            // Retry with feedback if plan is empty or only ai_chat (parsing failed)
+            if (plan.steps.isEmpty() || (plan.steps.size == 1 && plan.steps[0].skillName == "ai_chat")) {
+                println("⚠️ $TAG: план пустой/ai_chat, ретраю с feedback")
+                val retryPrompt = buildPlanPrompt(query, context) + "\n\n⚠️ PREVIOUS RESPONSE WAS REJECTED because it didn't contain a valid plan JSON." +
+                    "\n⚠️ Return ONLY a JSON object. No markdown, no code fences, no extra text." +
+                    "\n⚠️ If the user query requires current/up-to-date information, use web_search first."
+                val retryResponse = aiRepository.sendMessage(
+                    messages = listOf(Message.createUserMessage("assistant", retryPrompt)),
+                    systemPrompt = "Return ONLY valid JSON. No markdown. No code fences.",
+                    memoryContext = ""
+                )
+                val retryPlan = parsePlan(retryResponse.getOrThrow().text, query)
+                if (retryPlan.steps.isNotEmpty() && !(retryPlan.steps.size == 1 && retryPlan.steps[0].skillName == "ai_chat")) {
+                    println("✅ $TAG: retry дал план с ${retryPlan.steps.size} шагами")
+                    return retryPlan
+                }
+                println("⚠️ $TAG: retry снова не дал плана, перехожу к createFallbackPlan")
+            } else {
+                return plan
+            }
         } catch (e: Exception) {
             println("⚠️ $TAG: ошибка планирования: ${e.message}")
-            // Fallback: одношаговый план через AI chat
-            createFallbackPlan(query)
         }
+        // Fallback: умное определение — нужен ли поиск
+        return createFallbackPlan(query)
     }
 
     /**
@@ -334,9 +355,33 @@ EXAMPLES:
     }
 
     /**
-     * Fallback: простой одношаговый план через AI chat.
+     * Fallback: анализируем запрос — нужен ли поиск или достаточно AI.
+     * Если запрос требует актуальных данных → web_search + ai_chat.
      */
     private fun createFallbackPlan(query: String): AgentPlan {
+        val lower = query.lowercase()
+        
+        if (needsWebSearch(lower)) {
+            println("🔍 $TAG: fallback с web_search для информационного запроса")
+            return AgentPlan(
+                requiresPlanning = true,
+                steps = listOf(
+                    PlannerStep(
+                        skillName = "web_search",
+                        params = mapOf("command" to "web_search", "query" to query),
+                        outputVariable = "web_data",
+                        description = "Поиск актуальной информации в интернете"
+                    ),
+                    PlannerStep(
+                        skillName = "ai_chat",
+                        params = mapOf("query" to "На основе результатов поиска подробно ответь на вопрос пользователя. Результаты поиска: {web_data}"),
+                        description = "Формирование ответа на основе поиска"
+                    )
+                ),
+                reasoning = "Fallback: информационный запрос → поиск + ответ"
+            )
+        }
+        
         return AgentPlan(
             requiresPlanning = false,
             steps = listOf(
@@ -348,6 +393,52 @@ EXAMPLES:
             ),
             reasoning = "Fallback: не удалось распланировать, отвечаю напрямую"
         )
+    }
+
+    /**
+     * Универсальная эвристика: определяет, нужны ли актуальные данные из интернета.
+     * Анализирует лингвистические маркеры — глаголы, существительные, характерные для
+     * запросов, требующих свежей информации.
+     */
+    private fun needsWebSearch(query: String): Boolean {
+        // Лингвистические маркеры информационных запросов (не тематические, а функциональные)
+        val infoMarkers = listOf(
+            // Русские глаголы и существительные
+            "проанализиру", "анализ", "анализиру",
+            "прогноз", "спрогнозиру",
+            "найди", "поищи", "искать", "найти", "поиск",
+            "проверь", "проверить", "проверя",
+            "узнать", "узнай", "выясни", "выяснить",
+            "посмотри", "смотреть",
+            "сравни", "сравнение", "сравнить",
+            "новости", "последние", "актуальн",
+            "сегодня", "сейчас", "текущ",
+            "статистик", "данные", "показател",
+            "курс", "котировк", "рынок", "рынк",
+            "акци", "ценн", "обстановк",
+            "ставк", "инфляци", "валюта", 
+            "доллар", "евро", "биткоин",
+            "погод", "температур",
+            "рейтинг", "топ", "лучш",
+            "сколько сто", "какой сегод", "какая сегод",
+            "отзыв", "рекоменду",
+            "что дума", "кто тако",
+            // Английские
+            "analyze", "analysis", 
+            "forecast", "predict",
+            "search", "find", "look up",
+            "check", "verify",
+            "compare", "comparison",
+            "news", "latest", "current",
+            "today", "now",
+            "stock", "market", "price",
+            "rate", "exchange",
+            "weather", "temperature",
+            "what is", "how to", "why did",
+            "review", "recommend",
+            "who is", "tell me about"
+        )
+        return infoMarkers.any { query.contains(it) }
     }
 
     /**
