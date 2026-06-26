@@ -61,24 +61,12 @@ class DecisionEngine @Inject constructor(
         aiRepository.hybridStepHandler = { skillName, description, complexity ->
             aiRepository._hybridStepActive = true
             try {
-                // Навыки (кроме ai_chat) выполняем напрямую через SkillRegistry
-                val skill = skillRegistry.getSkill(skillName)
-                if (skill != null && skillName != "ai_chat") {
-                    val params = mapOf("command" to skillName, "query" to description)
-                    val result = skill.execute(params)
-                    when (result) {
-                        is com.pai.android.agent.SkillResult.Success -> result.message
-                        is com.pai.android.agent.SkillResult.Error -> null
-                        else -> null
-                    }
-                } else {
-                    // ai_chat или неизвестный навык — через DecisionEngine.processQuery
-                    val result = processQuery(description)
-                    when (result) {
-                        is AgentResponse.Success -> result.answer.ifBlank { "Шаг '$description' выполнен" }
-                        is AgentResponse.Error -> null
-                    }
-                }
+                val tools = buildNativeToolDefs(setOf("web_search", "contacts_search", "sms_send", "weather_forecast", "file_system_search", "web_fetch"))
+                aiRepository.sendMessage(
+                    messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid_step", description)),
+                    tools = tools,
+                    parentIsHybridSubStep = true
+                ).getOrNull()?.text
             } catch (e: Exception) {
                 null
             } finally {
