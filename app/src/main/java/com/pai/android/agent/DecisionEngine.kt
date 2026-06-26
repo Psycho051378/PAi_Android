@@ -53,6 +53,32 @@ class DecisionEngine @Inject constructor(
     var skillsDirectory: String = ""
 
     /**
+     * Инициализация: устанавливаем callback для Hybrid.
+     * Когда AiRepository.Hybrid обнаруживает [SKILL:] шаги, он вызывает этот callback,
+     * который делегирует выполнение шага обратно в DecisionEngine.processQuery.
+     */
+    init {
+        aiRepository.hybridStepHandler = { skillName, description, complexity ->
+            // Устанавливаем флаг, чтобы SmartRouter не включал Hybrid для подшага
+            aiRepository._hybridStepActive = true
+            try {
+                val result = processQuery(description)
+                when (result) {
+                    is AgentResponse.Success -> {
+                        // Если подшаг сам выполнил план — извлекаем ответ
+                        result.answer.ifBlank { "Шаг '$description' выполнен" }
+                    }
+                    is AgentResponse.Error -> null
+                }
+            } catch (e: Exception) {
+                null
+            } finally {
+                aiRepository._hybridStepActive = false
+            }
+        }
+    }
+
+    /**
      * Обрабатывает детерминированные запросы (early exit).
      * Если запрос совпадает с простым паттерном — выполняет сразу, не вызывая AI.
      * @return AgentResponse или null, если запрос не детерминированный

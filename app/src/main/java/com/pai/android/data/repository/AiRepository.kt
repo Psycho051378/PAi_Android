@@ -33,6 +33,7 @@ class AiRepository @Inject constructor(
     private val settingsRepository: ProviderSettingsRepository,
     private val aiChatServiceFactory: AiChatServiceFactory,
     private val defaultDispatcher: CoroutineDispatcher,
+
     private val webSearchService: WebSearchService,
     private val webSearchRepository: WebSearchRepository,
     private val localAiInteraction: LocalAiInteraction,
@@ -42,6 +43,12 @@ class AiRepository @Inject constructor(
     private val toolRegistry: com.pai.android.agent.ToolRegistry,
     private val skillRegistry: SkillRegistry
 ) {
+
+
+    /** Callback for Hybrid to delegate skill steps to DecisionEngine. */
+    var hybridStepHandler: (suspend (String, String, Int) -> String?)? = null
+    /** Flag: current request is a Hybrid sub-step. */
+    var _hybridStepActive: Boolean = false
     
     /**
      * Отправляет сообщение в AI с учётом всех настроек.
@@ -54,8 +61,11 @@ class AiRepository @Inject constructor(
         memoryContext: String? = null,
         tools: List<NativeToolDefinition>? = null,
         toolChoice: String? = null,
-        planExecuted: Boolean = false
+        planExecuted: Boolean = false,
+        parentIsHybridSubStep: Boolean = false
     ): Result<AiResponse> = withContext(defaultDispatcher) {
+      
+        _hybridStepActive = parentIsHybridSubStep
         try {
             // Определяем настройки провайдера
             val settings = providerSettings ?: settingsRepository.getDefaultSettings()
@@ -149,6 +159,25 @@ class AiRepository @Inject constructor(
                                 )
                             } else {
                                 println("⚠️ SmartRouter: NETWORK provider невалиден, продолжаю без роутера")
+                            }
+                        } else if (_hybridStepActive) {
+                            println("?? SmartRouter: HYBRID skipped - shag girida, ispolzu NETWORK")
+                            val netSId = routerConfig.networkProviderSettingsId.ifBlank {
+                                settingsRepository.getDefaultSettings()?.id ?: ""
+                            }
+                            val netS = settingsRepository.getSettings(netSId)
+                            if (netS != null && netS.isValid()) {
+                                return@withContext sendMessage(
+                                    messages = messages,
+                                    providerSettings = netS,
+                                    systemPrompt = systemPrompt,
+                                    memoryContext = memoryContext,
+                                    tools = tools,
+                                    toolChoice = toolChoice,
+                                    parentIsHybridSubStep = false
+                                )
+                            } else {
+                                println("?? SmartRouter: podshag girida, no setevoi provider nevaliden")
                             }
                         } else {
                             println("🔧 SmartRouter: HYBRID - decomposing query")
@@ -706,6 +735,12 @@ class AiRepository @Inject constructor(
 
         // ======================= ШАГ 1: Текущая модель составляет план =======================
 
+        // Получаем список всех доступных навыков из SkillRegistry (кроме ai_chat)
+        val availableSkills = skillRegistry.getAllSkills()
+            .filter { it.name != "ai_chat" && it.name != "external" }
+            .map { "  [SKILL:${it.name}] — ${it.description.take(100)}" }
+            .joinToString("\n")
+
         val plannerPrompt = buildString {
             appendLine("Ты — планировщик. Пользователь задал задачу. Разбей её на 2-4 шага.")
             appendLine()
@@ -717,16 +752,16 @@ class AiRepository @Inject constructor(
             appendLine("  5-10 — сложный/творческий шаг (анализ, стихи, код, сравнение)")
             appendLine()
             appendLine("ДОСТУПНЫЕ ИНСТРУМЕНТЫ:")
-            appendLine("  [WEB_SEARCH] — для шагов, которым нужны АКТУАЛЬНЫЕ данные из интернета")
-            appendLine("    (новости, котировки, погода, курсы валют, цены, факты, информация)")
-            appendLine("  [AI] — для шагов, где нужна генерация, анализ, творчество")
+            appendLine(availableSkills.ifEmpty { "  [AI] — генерация, анализ, творчество" })
+            appendLine("  [SKILL:ai_chat] — генерация ответа, творчество, общение")
             appendLine()
-            appendLine("Если шагу нужен поиск в интернете, пиши так:")
-            appendLine("  1. [3][WEB_SEARCH] Поиск текущих данных о рынках")
+            appendLine("Если шагу нужен конкретный инструмент, пиши его в скобках перед описанием:")
+            appendLine("  1. [3][SKILL:web_search] Поиск текущих данных о рынках")
+            appendLine("  2. [8][SKILL:ai_chat] Анализ полученных данных")
             appendLine()
             appendLine("Формат ответа — только нумерованный список:")
             appendLine("1. [3] Краткое определение чёрной дыры")
-            appendLine("2. [8][WEB_SEARCH] Поиск информации о событии")
+            appendLine("2. [8][SKILL:web_search] Поиск информации о событии")
             appendLine()
             append("Запрос пользователя: $cleanQuery")
             append("\nПлан:")
@@ -830,50 +865,29 @@ class AiRepository @Inject constructor(
 
         println("🔧 Hybrid: распарсено ${steps.size} шагов: ${steps.map { "[${it.complexity}]${if (it.complexity <= 4) "L" else "N"}" }}")
 
-        // ======================= ШАГ 2.5: Выполнение WEB_SEARCH для шагов, требующих данных =======================
-        val webSearchResults = mutableMapOf<Int, String>()
+        // ======================= ШАГ 2.5: Выполнение навыков для шагов, требующих данных =======================
+        val skillResults = mutableMapOf<Int, String>()
         for ((index, step) in steps.withIndex()) {
-            val needsSearch = step.description.contains("[WEB_SEARCH]", ignoreCase = true)
-            if (needsSearch) {
-                println("🔧 Hybrid: шаг ${index + 1} требует WEB_SEARCH, выполняю поиск...")
+            // Ищем [SKILL:name] в описании шага (универсально для любых навыков)
+            val skillMarker = Regex("""\[SKILL:(\w+)\]""", RegexOption.IGNORE_CASE).find(step.description)
+            if (skillMarker != null) {
+                val skillName = skillMarker.groupValues[1].lowercase()
+                // Очищаем описание от маркеров для чистоты
+                val cleanStepDesc = step.description
+                    .replace(Regex("\\[\\d+\\]"), "")
+                    .replace(Regex("\\[SKILL:\\\\w+\\]", RegexOption.IGNORE_CASE), "")
+                    .trim()
+                println("🔧 Hybrid: шаг ${index + 1} -> DecisionEngine [$skillName]")
                 try {
-                    val searchQuery = step.description
-                        .replace(Regex("\\[\\d+\\]"), "")
-                        .replace(Regex("\\[WEB_SEARCH\\]", RegexOption.IGNORE_CASE), "")
-                        .trim()
-                    // Используем WebSearchSkill (через SkillRegistry) вместо WebSearchService
-                    // WebSearchSkill использует HttpURLConnection к html.duckduckgo.com
-                    try {
-                        val webSearchSkill = skillRegistry.getSkill("web_search")
-                        if (webSearchSkill != null) {
-                            val skillResult = webSearchSkill.execute(
-                                mapOf("command" to "web_search", "query" to cleanQuery)
-                            )
-                            if (skillResult is SkillResult.Success) {
-                                val searchText = skillResult.message
-                                if (searchText.isNotBlank() && searchText.length > 30) {
-                                    webSearchResults[index] = searchText.take(5000)
-                                    println("🔧 Hybrid: WEB_SEARCH через WebSearchSkill дал контекст (${searchText.length} символов)")
-                                }
-                            } else {
-                                println("🔧 Hybrid: WebSearchSkill вернул ошибку: ${(skillResult as? SkillResult.Error)?.message}")
-                            }
-                        } else {
-                            println("🔧 Hybrid: WebSearchSkill не найден в реестре, fallback на webSearchService")
-                            val fallbackResults = webSearchService.search(
-                                query = if (searchQuery.length > 10) searchQuery else cleanQuery,
-                                maxResults = 5
-                            )
-                            if (fallbackResults.isNotEmpty()) {
-                                webSearchResults[index] = fallbackResults.joinToString("\n") { r -> "- ${r.title}: ${r.snippet} (${r.link})" }
-                                println("🔧 Hybrid: webSearchService дал ${fallbackResults.size} результатов")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        println("🔧 Hybrid: WEB_SEARCH ошибка: ${e.message}")
+                    val subResult = hybridStepHandler?.invoke(skillName, cleanStepDesc.ifEmpty { cleanQuery }, step.complexity)
+                    if (subResult != null) {
+                        skillResults[index] = subResult.take(5000)
+                        println("🔧 Hybrid: DecisionEngine отработал: ${subResult.take(100)}...")
+                    } else {
+                        println("🔧 Hybrid: hybridStepHandler не вернул результат или отсутствует")
                     }
                 } catch (e: Exception) {
-                    println("🔧 Hybrid: WEB_SEARCH ошибка: ${e.message}")
+                    println("🔧 Hybrid: ошибка hybridStepHandler: ${e.message}")
                 }
             }
         }
@@ -887,7 +901,7 @@ class AiRepository @Inject constructor(
             val stepNum = index + 1
             val useLocal = step.complexity <= localThreshold
             // Добавляем результаты веб-поиска в описание шага, если поиск выполнялся
-            val searchContext = webSearchResults[index]
+            val searchContext = skillResults[index]
             val enrichedDescription = if (searchContext != null) {
                 step.description + "\n\nРезультаты поиска:\n$searchContext"
             } else {
@@ -1285,6 +1299,7 @@ private suspend fun trySendToLocal(): Result<AiResponse>? {
     }
 
     /** Безопасно получает текст из content (строка или массив). */
+
     private fun ChatMessage.safeContentText(): String {
         return try {
             if (content.isJsonArray) {
