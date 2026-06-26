@@ -65,7 +65,9 @@ class AiRepository @Inject constructor(
         parentIsHybridSubStep: Boolean = false
     ): Result<AiResponse> = withContext(defaultDispatcher) {
       
-        _hybridStepActive = parentIsHybridSubStep
+        if (parentIsHybridSubStep) {
+            _hybridStepActive = true
+        }
         try {
             // Определяем настройки провайдера
             val settings = providerSettings ?: settingsRepository.getDefaultSettings()
@@ -877,6 +879,11 @@ class AiRepository @Inject constructor(
                     .replace(Regex("\\[\\d+\\]"), "")
                     .replace(Regex("\\[SKILL:\\\\w+\\]", RegexOption.IGNORE_CASE), "")
                     .trim()
+                // ai_chat не отправляем в DecisionEngine — выполнится как NETWORK в ШАГ 3
+                if (skillName == "ai_chat") {
+                    println("🔧 Hybrid: шаг ${index + 1} ai_chat — пропускаю, выполнится как NETWORK")
+                    continue
+                }
                 println("🔧 Hybrid: шаг ${index + 1} -> DecisionEngine [$skillName]")
                 try {
                     val subResult = hybridStepHandler?.invoke(skillName, cleanStepDesc.ifEmpty { cleanQuery }, step.complexity)
