@@ -73,11 +73,9 @@ class WebSearchSkill(
                     }
                 }
                 
-                // Суммаризируем через AI с дополнительным контекстом
-                val formattedResult = aiSummarizeSearchResults(query, aggregatedResults)
-                
+                // Отдаём сырые результаты поиска + содержимое страниц — AI сам справится
                 SkillResult.Success(
-                    message = "🌐 **Результаты поиска по запросу:** \"$query\"\n\n$formattedResult",
+                    message = "🌐 **Результаты поиска по запросу:** \"$query\"\n\n$aggregatedResults",
                     data = mapOf("query" to query, "result" to aggregatedResults),
                     responseType = ResponseType.TEXT
                 )

@@ -807,7 +807,8 @@ object AppModule {
         smartRouter: com.pai.android.agent.SmartRouter,
         smartRouterRepository: SmartRouterRepository,
         localReActAgent: com.pai.android.agent.LocalReActAgent,
-        toolRegistry: com.pai.android.agent.ToolRegistry
+        toolRegistry: com.pai.android.agent.ToolRegistry,
+        skillRegistry: SkillRegistry
     ): AiRepository {
         return AiRepository(
             settingsRepository,
@@ -819,7 +820,8 @@ object AppModule {
             smartRouter,
             smartRouterRepository,
             localReActAgent,
-            toolRegistry
+            toolRegistry,
+            skillRegistry
         )
     }
     

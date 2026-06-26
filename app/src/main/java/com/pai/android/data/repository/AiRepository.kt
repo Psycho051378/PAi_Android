@@ -5,6 +5,8 @@ import com.google.gson.reflect.TypeToken
 import com.pai.android.agent.LocalAiInteraction
 import com.pai.android.agent.LocalReActAgent
 import com.pai.android.agent.LocalToolDescriptions
+import com.pai.android.agent.SkillRegistry
+import com.pai.android.agent.SkillResult
 import com.pai.android.agent.SmartRouter
 import com.pai.android.data.model.AiProvider
 import com.pai.android.data.model.AiResponse
@@ -37,7 +39,8 @@ class AiRepository @Inject constructor(
     private val smartRouter: SmartRouter,
     private val smartRouterRepository: SmartRouterRepository,
     private val localReActAgent: LocalReActAgent,
-    private val toolRegistry: com.pai.android.agent.ToolRegistry
+    private val toolRegistry: com.pai.android.agent.ToolRegistry,
+    private val skillRegistry: SkillRegistry
 ) {
     
     /**
@@ -50,7 +53,8 @@ class AiRepository @Inject constructor(
         systemPrompt: String? = null,
         memoryContext: String? = null,
         tools: List<NativeToolDefinition>? = null,
-        toolChoice: String? = null
+        toolChoice: String? = null,
+        planExecuted: Boolean = false
     ): Result<AiResponse> = withContext(defaultDispatcher) {
         try {
             // Определяем настройки провайдера
@@ -125,13 +129,36 @@ class AiRepository @Inject constructor(
                         return@withContext Result.failure(Exception(decision.reason))
                     }
                     is com.pai.android.agent.RouteDecision.Hybrid -> {
-                        println("🔧 SmartRouter: HYBRID - decomposing query")
-                        return@withContext handleHybrid(
-                            messages = messages,
-                            systemPrompt = systemPrompt,
-                            memoryContext = memoryContext,
-                            settings = settings
-                        )
+                        if (planExecuted) {
+                            println("🔧 SmartRouter: HYBRID skipped — план уже выполнен, использую NETWORK")
+                            // План уже выполнен, результаты — в memoryContext. Нет смысла разбивать на подшаги.
+                            // Направляем на сетевую модель с planExecuted=true (чтобы не вызвать рекурсию)
+                            val networkSettingsId = routerConfig.networkProviderSettingsId.ifBlank {
+                                settingsRepository.getDefaultSettings()?.id ?: ""
+                            }
+                            val networkS = settingsRepository.getSettings(networkSettingsId)
+                            if (networkS != null && networkS.isValid()) {
+                                return@withContext sendMessage(
+                                    messages = messages,
+                                    providerSettings = networkS,
+                                    systemPrompt = systemPrompt,
+                                    memoryContext = memoryContext,
+                                    tools = tools,
+                                    toolChoice = toolChoice,
+                                    planExecuted = true
+                                )
+                            } else {
+                                println("⚠️ SmartRouter: NETWORK provider невалиден, продолжаю без роутера")
+                            }
+                        } else {
+                            println("🔧 SmartRouter: HYBRID - decomposing query")
+                            return@withContext handleHybrid(
+                                messages = messages,
+                                systemPrompt = systemPrompt,
+                                memoryContext = memoryContext,
+                                settings = settings
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -689,9 +716,17 @@ class AiRepository @Inject constructor(
             appendLine("  1-4 — простой шаг (короткий ответ, факт, определение)")
             appendLine("  5-10 — сложный/творческий шаг (анализ, стихи, код, сравнение)")
             appendLine()
+            appendLine("ДОСТУПНЫЕ ИНСТРУМЕНТЫ:")
+            appendLine("  [WEB_SEARCH] — для шагов, которым нужны АКТУАЛЬНЫЕ данные из интернета")
+            appendLine("    (новости, котировки, погода, курсы валют, цены, факты, информация)")
+            appendLine("  [AI] — для шагов, где нужна генерация, анализ, творчество")
+            appendLine()
+            appendLine("Если шагу нужен поиск в интернете, пиши так:")
+            appendLine("  1. [3][WEB_SEARCH] Поиск текущих данных о рынках")
+            appendLine()
             appendLine("Формат ответа — только нумерованный список:")
             appendLine("1. [3] Краткое определение чёрной дыры")
-            appendLine("2. [8] Стихотворение про космос")
+            appendLine("2. [8][WEB_SEARCH] Поиск информации о событии")
             appendLine()
             append("Запрос пользователя: $cleanQuery")
             append("\nПлан:")
@@ -795,6 +830,54 @@ class AiRepository @Inject constructor(
 
         println("🔧 Hybrid: распарсено ${steps.size} шагов: ${steps.map { "[${it.complexity}]${if (it.complexity <= 4) "L" else "N"}" }}")
 
+        // ======================= ШАГ 2.5: Выполнение WEB_SEARCH для шагов, требующих данных =======================
+        val webSearchResults = mutableMapOf<Int, String>()
+        for ((index, step) in steps.withIndex()) {
+            val needsSearch = step.description.contains("[WEB_SEARCH]", ignoreCase = true)
+            if (needsSearch) {
+                println("🔧 Hybrid: шаг ${index + 1} требует WEB_SEARCH, выполняю поиск...")
+                try {
+                    val searchQuery = step.description
+                        .replace(Regex("\\[\\d+\\]"), "")
+                        .replace(Regex("\\[WEB_SEARCH\\]", RegexOption.IGNORE_CASE), "")
+                        .trim()
+                    // Используем WebSearchSkill (через SkillRegistry) вместо WebSearchService
+                    // WebSearchSkill использует HttpURLConnection к html.duckduckgo.com
+                    try {
+                        val webSearchSkill = skillRegistry.getSkill("web_search")
+                        if (webSearchSkill != null) {
+                            val skillResult = webSearchSkill.execute(
+                                mapOf("command" to "web_search", "query" to cleanQuery)
+                            )
+                            if (skillResult is SkillResult.Success) {
+                                val searchText = skillResult.message
+                                if (searchText.isNotBlank() && searchText.length > 30) {
+                                    webSearchResults[index] = searchText.take(5000)
+                                    println("🔧 Hybrid: WEB_SEARCH через WebSearchSkill дал контекст (${searchText.length} символов)")
+                                }
+                            } else {
+                                println("🔧 Hybrid: WebSearchSkill вернул ошибку: ${(skillResult as? SkillResult.Error)?.message}")
+                            }
+                        } else {
+                            println("🔧 Hybrid: WebSearchSkill не найден в реестре, fallback на webSearchService")
+                            val fallbackResults = webSearchService.search(
+                                query = if (searchQuery.length > 10) searchQuery else cleanQuery,
+                                maxResults = 5
+                            )
+                            if (fallbackResults.isNotEmpty()) {
+                                webSearchResults[index] = fallbackResults.joinToString("\n") { r -> "- ${r.title}: ${r.snippet} (${r.link})" }
+                                println("🔧 Hybrid: webSearchService дал ${fallbackResults.size} результатов")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("🔧 Hybrid: WEB_SEARCH ошибка: ${e.message}")
+                    }
+                } catch (e: Exception) {
+                    println("🔧 Hybrid: WEB_SEARCH ошибка: ${e.message}")
+                }
+            }
+        }
+
         // ======================= ШАГ 3: Выполнение шагов =======================
 
         val localThreshold = routerConfig.hybridThreshold.coerceIn(1, 9) // сложность 1-N → local, N+1-10 → network
@@ -803,7 +886,14 @@ class AiRepository @Inject constructor(
         for ((index, step) in steps.withIndex()) {
             val stepNum = index + 1
             val useLocal = step.complexity <= localThreshold
-            println("🔧 Hybrid: шаг $stepNum/${steps.size} — ${if (useLocal) "LOCAL" else "NETWORK"} (сложность ${step.complexity}): '${step.description.take(60)}'")
+            // Добавляем результаты веб-поиска в описание шага, если поиск выполнялся
+            val searchContext = webSearchResults[index]
+            val enrichedDescription = if (searchContext != null) {
+                step.description + "\n\nРезультаты поиска:\n$searchContext"
+            } else {
+                step.description
+            }
+            println("🔧 Hybrid: шаг $stepNum/${steps.size} — ${if (useLocal) "LOCAL" else "NETWORK"} (сложность ${step.complexity}): '${step.description.take(60)}'${if (searchContext != null) " [с результатами поиска]" else ""}")
 
             if (useLocal) {
                 // Пытаемся выполнить на LiteRT, если недоступен — фолбэк на сеть
@@ -813,7 +903,7 @@ class AiRepository @Inject constructor(
                         val localResult = handleLocalInference(
                             settings = localSettings,
                             messages = listOf(com.pai.android.data.model.Message.createAssistantMessage("hybrid", "")),
-                            systemPrompt = "Ответь на следующий запрос кратко (1-3 предложения): " + step.description
+                            systemPrompt = "Ответь на следующий запрос кратко (1-3 предложения): " + enrichedDescription
                         )
                         if (localResult.isSuccess) {
                             results.add("Шаг $stepNum: ${localResult.getOrThrow().text}")
@@ -833,7 +923,7 @@ class AiRepository @Inject constructor(
                 // Выполняем на сетевой модели
                 try {
                     val netResult = sendMessage(
-                        messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid", step.description)),
+                        messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid", enrichedDescription)),
                         providerSettings = effectiveNetworkSettings,
                         systemPrompt = "Ответь на запрос (без лишних пояснений)."
                     )
@@ -1135,7 +1225,42 @@ class AiRepository @Inject constructor(
      * Пытается отправить запрос на локальную модель (LiteRT).
      * Используется как fallback при недоступности сети.
      */
-    private suspend fun trySendToLocal(): Result<AiResponse>? {
+        /**
+     * Fallback to network: sends a request and returns the text response.
+     */
+    private suspend fun fallbackAndGet(
+        prompt: String,
+        networkSettings: ProviderSettings
+    ): String {
+        return try {
+            val result = sendMessage(
+                messages = listOf(com.pai.android.data.model.Message.createUserMessage("hybrid", prompt)),
+                providerSettings = networkSettings,
+                systemPrompt = "Answer the query (no extra explanations)."
+            )
+            if (result.isSuccess) result.getOrThrow().text
+            else "[error: " + result.exceptionOrNull()?.message + "]"
+        } catch (e: Exception) {
+            "[error: " + e.message + "]"
+        }
+    }
+
+    /**
+     * Checks if accumulated results already satisfy the user query.
+     */
+    private fun isSatisfied(query: String, accumulated: String): Boolean {
+        if (accumulated.length > 2000) return true
+        val words = query.lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.length > 3 }
+            .distinct()
+        if (words.size <= 2) return false
+        val matched = words.count { w -> accumulated.lowercase().contains(w) }
+        return matched >= words.size * 0.7
+    }
+
+private suspend fun trySendToLocal(): Result<AiResponse>? {
         try {
             val local = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT).firstOrNull()
             if (local == null || !local.isValid()) {
