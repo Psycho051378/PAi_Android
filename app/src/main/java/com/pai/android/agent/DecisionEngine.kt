@@ -59,16 +59,25 @@ class DecisionEngine @Inject constructor(
      */
     init {
         aiRepository.hybridStepHandler = { skillName, description, complexity ->
-            // Устанавливаем флаг, чтобы SmartRouter не включал Hybrid для подшага
             aiRepository._hybridStepActive = true
             try {
-                val result = processQuery(description)
-                when (result) {
-                    is AgentResponse.Success -> {
-                        // Если подшаг сам выполнил план — извлекаем ответ
-                        result.answer.ifBlank { "Шаг '$description' выполнен" }
+                // Навыки (кроме ai_chat) выполняем напрямую через SkillRegistry
+                val skill = skillRegistry.getSkill(skillName)
+                if (skill != null && skillName != "ai_chat") {
+                    val params = mapOf("command" to skillName, "query" to description)
+                    val result = skill.execute(params)
+                    when (result) {
+                        is com.pai.android.agent.SkillResult.Success -> result.message
+                        is com.pai.android.agent.SkillResult.Error -> null
+                        else -> null
                     }
-                    is AgentResponse.Error -> null
+                } else {
+                    // ai_chat или неизвестный навык — через DecisionEngine.processQuery
+                    val result = processQuery(description)
+                    when (result) {
+                        is AgentResponse.Success -> result.answer.ifBlank { "Шаг '$description' выполнен" }
+                        is AgentResponse.Error -> null
+                    }
                 }
             } catch (e: Exception) {
                 null
