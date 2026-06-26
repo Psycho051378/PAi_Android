@@ -1,6 +1,17 @@
 package com.pai.android.data.model
 
 /**
+ * Шаг плана от Hybrid-планировщика, который нужно выполнить через SkillRegistry.
+ * Когда Hybrid обнаруживает шаги с [SKILL:name], он не выполняет их сам,
+ * а возвращает план в DecisionEngine для корректного выполнения.
+ */
+data class HybridSkillStep(
+    val skillName: String,
+    val description: String,
+    val parameters: Map<String, Any> = emptyMap()
+)
+
+/**
  * Ответ от AI системы.
  */
 data class AiResponse(
@@ -10,7 +21,9 @@ data class AiResponse(
     val tokensUsed: Int? = null,
     val error: Throwable? = null,
     /** Вызовы инструментов от модели (нативный tool calling). */
-    val toolCalls: List<NativeToolCall>? = null
+    val toolCalls: List<NativeToolCall>? = null,
+    /** План навыков от Hybrid-планировщика (если есть [SKILL:] шаги). */
+    val skillPlan: List<HybridSkillStep>? = null
 ) {
     companion object {
         fun success(
