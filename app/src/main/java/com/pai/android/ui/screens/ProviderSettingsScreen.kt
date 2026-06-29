@@ -150,8 +150,8 @@ fun ProviderSettingsScreen(
                         isDownloading = state.isDownloading,
                         isDownloaded = state.isDownloaded,
                         downloadError = state.downloadError,
-                        onSave = { provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend ->
-                            viewModel.saveSettings(provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend)
+                        onSave = { provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend, autoUnloadSeconds ->
+                            viewModel.saveSettings(provider, apiKey, baseUrl, modelName, isDefault, maxTokens, thinkingModeEnabled, contextManagement, modelMaxContext, modelMaxOutput, contextBufferPercent, useCustomParams, temperature, topP, useGpuBackend, autoUnloadSeconds)
                         },
                         onCancel = { viewModel.cancelEditing() },
                         onCheckCompatibility = { modelId -> viewModel.checkCompatibility(modelId) },
@@ -382,7 +382,8 @@ fun EditProviderSettingsScreen(
         useCustomParams: Boolean,
         temperature: Double?,
         topP: Double?,
-        useGpuBackend: Boolean
+        useGpuBackend: Boolean,
+        autoUnloadSeconds: Int
     ) -> Unit,
     onCancel: () -> Unit,
     onCheckCompatibility: (String) -> Unit = {},
@@ -408,6 +409,7 @@ fun EditProviderSettingsScreen(
     var temperatureValue by remember { mutableStateOf(settings?.temperature?.toFloat() ?: 0.7f) }
     var topPValue by remember { mutableStateOf(settings?.topP?.toFloat() ?: 1.0f) }
     var useGpuBackend by remember { mutableStateOf(settings?.useGpuBackend ?: true) }
+    var autoUnloadSeconds by remember { mutableStateOf(settings?.autoUnloadSeconds ?: 0) }
     
     val scrollState = rememberScrollState()
     Column(modifier = Modifier.padding(16.dp).verticalScroll(scrollState)) {
@@ -560,7 +562,41 @@ fun EditProviderSettingsScreen(
                 text = if (useGpuBackend) stringResource(R.string.provider_gpu_desc) else stringResource(R.string.provider_cpu_desc),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
+
+            // Автовыгрузка локальной модели при переключении на сеть
+            Text(
+                text = "Автовыгрузка при уходе на сеть",
+                fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val options = listOf(
+                    "Никогда" to 0,
+                    "30 сек" to 30,
+                    "5 мин" to 300
+                )
+                options.forEach { (label, value) ->
+                    FilterChip(
+                        selected = autoUnloadSeconds == value,
+                        onClick = { autoUnloadSeconds = value },
+                        label = { Text(label) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+            }
+            Text(
+                text = when (autoUnloadSeconds) {
+                    0 -> "Локальная модель всегда в памяти"
+                    30 -> "Модель выгрузится через 30 секунд бездействия сети"
+                    300 -> "Модель выгрузится через 5 минут бездействия сети"
+                    else -> "Модель выгрузится через ${autoUnloadSeconds}с бездействия сети"
+                },
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             if (isDownloaded) {
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))) {
@@ -796,7 +832,8 @@ fun EditProviderSettingsScreen(
                         useCustomParams,
                         temperatureValue.toDouble(),
                         topPValue.toDouble(),
-                        useGpuBackend
+                        useGpuBackend,
+                        autoUnloadSeconds
                     )
                 },
                 modifier = Modifier.weight(1f)

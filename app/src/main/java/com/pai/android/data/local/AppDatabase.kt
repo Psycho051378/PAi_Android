@@ -34,7 +34,7 @@ import com.pai.android.data.model.GeoTask
         QueryAnalysisResult::class,
         GeoTask::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -468,5 +468,14 @@ internal val MIGRATION_20_21 = object : Migration(20, 21) {
         println("🔨 MIGRATION_20_21: Добавляем поле use_gpu_backend в provider_settings")
         database.execSQL("ALTER TABLE provider_settings ADD COLUMN use_gpu_backend INTEGER NOT NULL DEFAULT 1")
         println("✅ MIGRATION_20_21: Поле use_gpu_backend добавлено (по умолчанию GPU)")
+    }
+}
+
+// Миграция 21 → 22: Добавляем поле auto_unload_seconds
+internal val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        println("🔨 MIGRATION_21_22: Добавляем поле auto_unload_seconds в provider_settings")
+        database.execSQL("ALTER TABLE provider_settings ADD COLUMN auto_unload_seconds INTEGER NOT NULL DEFAULT 0")
+        println("✅ MIGRATION_21_22: Поле auto_unload_seconds добавлено (0 = никогда)")
     }
 }

@@ -77,6 +77,15 @@ class AiRepository @Inject constructor(
                 return@withContext Result.failure(IllegalStateException("No valid AI provider configured"))
             }
 
+            // При отправке на сетевую модель — планируем выгрузку локалки (grace-таймер)
+            // Читаем настройку из LITE_RT конфига, потому что это настройка именно локальной модели
+            val isNetworkRequest = settings.provider != AiProvider.LITE_RT
+            if (isNetworkRequest) {
+                val liteRtUnload = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT)
+                    .firstOrNull()?.autoUnloadSeconds ?: 0
+                localAiInteraction.scheduleAutoUnload(liteRtUnload)
+            }
+
             // Обновляем информацию о текущей модели для UI
             com.pai.android.agent.DecisionEngine.processingModelName = modelOverride ?: settings.getEffectiveModel()
             
@@ -259,7 +268,7 @@ class AiRepository @Inject constructor(
                 val localResult = handleLocalInference(settings, messages, systemPrompt)
                 return@withContext localResult
             }
-            
+
             // Создаём сервис для провайдера
             val aiService = aiChatServiceFactory.createService(settings)
             
@@ -344,6 +353,14 @@ class AiRepository @Inject constructor(
             val settings = providerSettings ?: settingsRepository.getDefaultSettings()
             if (settings == null || !settings.isValid()) {
                 return@withContext Result.failure(IllegalStateException("No valid AI provider configured"))
+            }
+
+            // При отправке на сетевую модель — планируем выгрузку локалки (grace-таймер)
+            // Читаем настройку из LITE_RT конфига, потому что это настройка именно локальной модели
+            if (settings.provider != AiProvider.LITE_RT) {
+                val liteRtUnload = settingsRepository.getSettingsForProvider(AiProvider.LITE_RT)
+                    .firstOrNull()?.autoUnloadSeconds ?: 0
+                localAiInteraction.scheduleAutoUnload(liteRtUnload)
             }
 
             // === Smart Router: только для запросов без явного провайдера ===
@@ -487,7 +504,7 @@ class AiRepository @Inject constructor(
                 val localResult = handleLocalInference(settings, messages, systemPrompt, attachments = attachments)
                 return@withContext localResult
             }
-            
+
             // Создаём сервис для провайдера
             val aiService = aiChatServiceFactory.createService(settings)
             

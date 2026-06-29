@@ -129,7 +129,8 @@ class ProviderSettingsViewModel @Inject constructor(
         useCustomParams: Boolean = false,
         temperature: Double? = null,
         topP: Double? = null,
-        useGpuBackend: Boolean = true
+        useGpuBackend: Boolean = true,
+        autoUnloadSeconds: Int = 0
     ) {
         viewModelScope.launch {
             try {
@@ -149,6 +150,7 @@ class ProviderSettingsViewModel @Inject constructor(
                     temperature = temperature,
                     topP = topP,
                     useGpuBackend = useGpuBackend,
+                    autoUnloadSeconds = autoUnloadSeconds,
                     updatedAt = System.currentTimeMillis()
                 ) ?: ProviderSettings(
                     provider = provider,
@@ -162,7 +164,8 @@ class ProviderSettingsViewModel @Inject constructor(
                     contextManagement = contextManagement,
                     modelMaxContext = modelMaxContext,
                     modelMaxOutput = modelMaxOutput,
-                    contextBufferPercent = contextBufferPercent
+                    contextBufferPercent = contextBufferPercent,
+                    autoUnloadSeconds = autoUnloadSeconds
                 )
                 
                 settingsRepository.saveSettings(settings)

@@ -84,6 +84,10 @@ data class ProviderSettings(
     /** Использовать GPU для локальной модели вместо CPU */
     @ColumnInfo(name = "use_gpu_backend")
     val useGpuBackend: Boolean = true,
+
+    /** Автовыгрузка локальной модели при переключении на сеть (секунды). 0 = никогда */
+    @ColumnInfo(name = "auto_unload_seconds")
+    val autoUnloadSeconds: Int = 0,
     
     val createdAt: Long = System.currentTimeMillis(),
     
