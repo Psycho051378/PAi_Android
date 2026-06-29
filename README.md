@@ -155,28 +155,49 @@ External skills can be installed from the built-in Skill Store. Skills are fetch
 
 ```
 com.pai.android/
-├── agent/
-│   ├── DecisionEngine.kt      # Main decision loop (ReAct)
-│   ├── SmartRouter.kt         # Cloud vs local query routing
-│   ├── LocalAiInteraction.kt  # On-device model inference
-│   ├── ContextEngine.kt       # Device context (location, battery, notifications)
-│   ├── ProactiveTrigger.kt    # Proactive suggestions & automation
-│   ├── TaskScheduler.kt       # Cron-like task scheduling
-│   ├── tools/                  # Tool implementations (fetch, codegen, location...)
-│   ├── skills/                 # Built-in skills (email, sms, call, weather...)
-│   └── SkillRegistry.kt       # Central skill management
+├── agent/                      # Core agent logic
+│   ├── DecisionEngine.kt       # Main decision loop (ReAct)
+│   ├── SmartRouter.kt          # Cloud vs local query routing
+│   ├── LocalAiInteraction.kt   # On-device model inference
+│   ├── ContextEngine.kt        # Device context (battery, notifications, location)
+│   ├── ProactiveTrigger.kt     # Proactive suggestions & automation
+│   ├── TaskScheduler.kt        # Cron-like task scheduling
+│   ├── SkillRegistry.kt        # Central skill management
+│   ├── tools/                  # Core tools (web_fetch, codegen, etc.)
+│   └── skills/                 # Built-in skills (email, sms, call, weather, home...)
 ├── data/
-│   ├── local/                  # Room database, DAOs, local models
-│   ├── model/                  # Data models
-│   ├── repository/             # Data repositories
-│   └── detector/               # Intent/fact detection
-├── presentation/               # ViewModels
-├── ui/
-│   ├── screens/                # Compose screens
-│   ├── components/             # Reusable UI components
-│   └── navigation/             # Navigation graph
-├── di/                         # Hilt dependency injection
-└── service/                    # Background services, NotificationListener
+│   ├── local/                  # Room database, DAOs
+│   │   └── model/              # Local model management (ModelManager, LiteRT)
+│   ├── model/                  # Data models (ProviderSettings, Chat, Message...)
+│   ├── network/                # API clients, request/response models
+│   │   └── model/              # Network model classes
+│   ├── repository/             # Data access layer
+│   ├── detector/               # Intent & fact detection (extractPersonInfo...)
+│   ├── export/                 # Data export/import utilities
+│   ├── processor/              # Data processing logic
+│   ├── service/                # Repository-level services
+│   ├── summarizer/             # Chat summarization
+│   └── util/                   # Shared data utilities
+├── presentation/               # ViewModels organized by feature
+│   ├── chat/                   # Chat screen ViewModel
+│   ├── settings/               # Provider & app settings ViewModels
+│   ├── memory/                 # Memory management ViewModel
+│   ├── permissions/            # Permissions onboarding ViewModel
+│   ├── camera/                 # Camera-related ViewModel
+│   └── voice/                  # Voice control ViewModel
+├── ui/                         # Jetpack Compose UI
+│   ├── screens/                # Screen composables
+│   ├── components/             # Reusable composable components
+│   ├── navigation/             # Navigation graph + routes
+│   ├── theme/                  # Material3 theme (colors, typography)
+│   ├── diagrams/               # Custom diagram composables
+│   ├── utils/                  # UI utilities (animations, hints)
+│   └── viewmodel/              # Shared ViewModel bases
+├── di/                         # Hilt DI modules
+├── service/                    # Android background services
+│   ├── NotificationListener.kt # Real-time notification interception
+│   └── ForegroundService.kt    # Persistent background service
+└── worker/                     # WorkManager tasks
 ```
 
 ---
