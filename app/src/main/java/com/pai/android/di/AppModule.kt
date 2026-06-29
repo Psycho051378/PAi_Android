@@ -9,6 +9,7 @@ import com.pai.android.data.local.AppDatabase
 import com.pai.android.data.local.AttachmentDao
 import com.pai.android.data.local.MIGRATION_19_20
 import com.pai.android.data.local.MIGRATION_20_21
+import com.pai.android.data.local.MIGRATION_21_22
 import com.pai.android.data.local.GeoTaskDao
 import com.pai.android.data.local.ChatDao
 import com.pai.android.data.local.MemoryDao
@@ -582,7 +583,7 @@ object AppModule {
             AppDatabase::class.java,
             "pai_database"
         )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21) // Явные миграции с версии 1 на 21
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22) // Явные миграции с версии 1 на 22
         .fallbackToDestructiveMigration() // Уничтожает БД при несовпадении схемы (резерв)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {

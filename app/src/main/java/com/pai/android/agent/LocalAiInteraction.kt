@@ -17,6 +17,10 @@ import com.pai.android.data.model.Attachment
 import com.pai.android.data.model.AttachmentType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -49,6 +53,9 @@ class LocalAiInteraction @Inject constructor(
     private var loadedModelId: String? = null
     private val modelLock = Mutex()
 
+    /** Job для отложенной выгрузки модели (grace-таймер). */
+    private var unloadJob: Job? = null
+
     /** Загружает скачанную модель LiteRT LM. */
     suspend fun loadModel(modelId: String, useGpuBackend: Boolean = true): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -62,6 +69,9 @@ class LocalAiInteraction @Inject constructor(
                 )
 
             Log.i(TAG, "Загрузка модели $modelId из ${modelFile.absolutePath}")
+
+            // Отменяем отложенную выгрузку, если была (модель снова активна)
+            cancelAutoUnload()
 
             modelLock.withLock {
                 engine?.close()
@@ -309,11 +319,42 @@ class LocalAiInteraction @Inject constructor(
     fun isLoaded(): Boolean = engine?.isInitialized() == true
     fun getLoadedModelId(): String? = loadedModelId
 
+    /**
+     * Планирует отложенную выгрузку модели через указанное количество секунд.
+     * Если модель не загружена или timeoutSeconds <= 0 — ничего не делает.
+     * Отменяет предыдущий запланированный выгруз, если был.
+     */
+    fun scheduleAutoUnload(timeoutSeconds: Int) {
+        if (!isLoaded() || timeoutSeconds <= 0) {
+            cancelAutoUnload()
+            return
+        }
+        Log.i(TAG, "[AUTO_UNLOAD] Планирую выгрузку модели через ${timeoutSeconds}с")
+        cancelAutoUnload()
+        val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.Job())
+        unloadJob = scope.launch {
+            delay(timeoutSeconds * 1000L)
+            unloadModel()
+        }
+    }
+
+    /** Отменяет запланированную выгрузку (если таймер запущен). */
+    fun cancelAutoUnload() {
+        unloadJob?.let { job ->
+            if (job.isActive) {
+                job.cancel()
+                Log.i(TAG, "[AUTO_UNLOAD] Отложенная выгрузка отменена")
+            }
+        }
+        unloadJob = null
+    }
+
     suspend fun unloadModel() {
+        cancelAutoUnload()
         modelLock.withLock {
             try { engine?.close() } catch (e: Exception) { Log.w(TAG, "Ошибка выгрузки", e) }
             finally { engine = null; loadedModelId = null }
         }
-        Log.i(TAG, "Модель выгружена")
+        Log.i(TAG, "[AUTO_UNLOAD] Модель выгружена")
     }
 }
