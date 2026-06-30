@@ -68,11 +68,16 @@
 ## 📸 Screenshots
 
 <div align="center">
-  <img src="screenshots/Screenshot_20260618_102312.png" width="200" alt="Memory & Address Saving" />
-  <img src="screenshots/Screenshot_20260618_102338.png" width="200" alt="Route Building" />
-  <img src="screenshots/Screenshot_20260618_102443.png" width="200" alt="Agent Interaction" />
-  <img src="screenshots/Screenshot_20260618_102528.png" width="200" alt="Agent Chat" />
-  <img src="screenshots/Screenshot_20260618_102557.png" width="200" alt="Fact Management" />
+  <img src="screenshots/1_Permission_Screen.png" width="200" alt="Permission Onboarding" />
+  <img src="screenshots/2_Settings_Screen.png" width="200" alt="Settings — Main" />
+  <img src="screenshots/3_Settings_Screen.png" width="200" alt="Settings — Scroll" />
+  <img src="screenshots/4_Provider_Settings.png" width="200" alt="AI Provider Settings" />
+  <img src="screenshots/5_Local_Provider_Settings.png" width="200" alt="Local Model Settings" />
+  <img src="screenshots/6_Smart_Router_Settings.png" width="200" alt="Smart Router — Top" />
+  <img src="screenshots/7_Smart_Router_Settings.png" width="200" alt="Smart Router — Bottom" />
+  <img src="screenshots/8_Proactive_Mode_Settings.png" width="200" alt="Proactive Mode Settings" />
+  <img src="screenshots/9_Chats_Screen.png" width="200" alt="Chats List" />
+  <img src="screenshots/10_Chat.png" width="200" alt="Chat Detail" />
 </div>
 
 ---

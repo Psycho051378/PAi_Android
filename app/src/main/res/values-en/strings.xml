@@ -606,4 +606,14 @@
     <string name="smart_router_status_on">Smart Router: on</string>
     <string name="smart_router_status_off">Smart Router: off</string>
 
+    <!-- Local model auto-unload -->
+    <string name="provider_auto_unload_title">Auto-unload when switching to network</string>
+    <string name="provider_auto_unload_never">Never</string>
+    <string name="provider_auto_unload_30s">30 sec</string>
+    <string name="provider_auto_unload_5m">5 min</string>
+    <string name="provider_auto_unload_desc_always">Local model always stays in memory</string>
+    <string name="provider_auto_unload_desc_30s">Model unloads after 30s of network inactivity</string>
+    <string name="provider_auto_unload_desc_5m">Model unloads after 5 min of network inactivity</string>
+    <string name="provider_auto_unload_desc_custom">Model unloads after %d s of network inactivity</string>
+
 </resources>

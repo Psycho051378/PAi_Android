@@ -563,9 +563,9 @@ fun EditProviderSettingsScreen(
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Автовыгрузка локальной модели при переключении на сеть
+            // Local model auto-unload when switching to network
             Text(
-                text = "Автовыгрузка при уходе на сеть",
+                text = stringResource(R.string.provider_auto_unload_title),
                 fontSize = 14.sp, fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
             )
@@ -574,25 +574,25 @@ fun EditProviderSettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val options = listOf(
-                    "Никогда" to 0,
-                    "30 сек" to 30,
-                    "5 мин" to 300
+                    R.string.provider_auto_unload_never to 0,
+                    R.string.provider_auto_unload_30s to 30,
+                    R.string.provider_auto_unload_5m to 300
                 )
-                options.forEach { (label, value) ->
+                options.forEach { (labelRes, value) ->
                     FilterChip(
                         selected = autoUnloadSeconds == value,
                         onClick = { autoUnloadSeconds = value },
-                        label = { Text(label) },
+                        label = { Text(stringResource(labelRes)) },
                         modifier = Modifier.padding(end = 8.dp)
                     )
                 }
             }
             Text(
                 text = when (autoUnloadSeconds) {
-                    0 -> "Локальная модель всегда в памяти"
-                    30 -> "Модель выгрузится через 30 секунд бездействия сети"
-                    300 -> "Модель выгрузится через 5 минут бездействия сети"
-                    else -> "Модель выгрузится через ${autoUnloadSeconds}с бездействия сети"
+                    0 -> stringResource(R.string.provider_auto_unload_desc_always)
+                    30 -> stringResource(R.string.provider_auto_unload_desc_30s)
+                    300 -> stringResource(R.string.provider_auto_unload_desc_5m)
+                    else -> stringResource(R.string.provider_auto_unload_desc_custom, autoUnloadSeconds)
                 },
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
