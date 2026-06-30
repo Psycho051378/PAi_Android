@@ -116,13 +116,46 @@ class ExternalSkillRepository @Inject constructor(
     }
 
     /**
-     * Удаляет навык.
+     * Удаляет навык — из памяти и физически (файлы .json и .py).
      */
     suspend fun removeInstalledSkill(skillId: String) {
+        // 1. Удаляем из списка установленных
         val existing = getInstalledSkills().toMutableList()
+        val removed = existing.find { it.id == skillId }
         existing.removeAll { it.id == skillId }
         saveInstalledList(existing)
-        skillRegistry?.let { reloadExtSkills(it) }
+
+        // 2. Удаляем физические файлы навыка с диска
+        if (removed != null && skillsDirectory.isNotBlank()) {
+            val name = removed.name
+            val jsonFile = java.io.File(skillsDirectory, "$name.json")
+            val pyFile = java.io.File(skillsDirectory, "$name.py")
+            try {
+                if (jsonFile.exists()) {
+                    jsonFile.delete()
+                    println("ExternalSkillRepo: deleted $jsonFile")
+                }
+                if (pyFile.exists()) {
+                    pyFile.delete()
+                    println("ExternalSkillRepo: deleted $pyFile")
+                }
+            } catch (e: Exception) {
+                println("ExternalSkillRepo: error deleting files for '$name': ${e.message}")
+            }
+        }
+
+        // 3. Пересканируем директорию (без reloadExtSkills, чтобы не восстановить удалённое)
+        skillRegistry?.let { registry ->
+            val extSkills = registry.getAllSkills().filter { it.name.startsWith("ext_") }
+            for (sk in extSkills) {
+                val file = java.io.File(skillsDirectory, sk.name.removePrefix("ext_") + ".json")
+                if (!file.exists()) {
+                    registry.unregister(sk.name)
+                    println("ExternalSkillRepo: unregistered missing skill '" + sk.name + "'")
+                }
+            }
+            scanLocalSkills(registry)
+        }
     }
 
     /**
