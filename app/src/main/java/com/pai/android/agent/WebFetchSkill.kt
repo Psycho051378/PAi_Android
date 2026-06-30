@@ -76,7 +76,7 @@ class WebFetchSkill(
                     ${rawContent.take(12000)}
                     """.trimIndent()
                 )),
-                systemPrompt = "Ты форматируешь содержимое веб-страниц. Отвечай на том же языке, что и контент.",
+                systemPrompt = "You format web page content. Reply in the same language as the content.",
                 memoryContext = ""
             )
             response.getOrThrow().text
