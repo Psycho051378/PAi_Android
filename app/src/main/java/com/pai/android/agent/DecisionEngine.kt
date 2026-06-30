@@ -395,7 +395,7 @@ class DecisionEngine @Inject constructor(
                                 )
                             ),
                             attachments = imageAttachments,
-                            systemPrompt = "Ты — AI с поддержкой зрения. Ответь на русском языке."
+                            systemPrompt = "You are an AI with vision capabilities. Analyze the image and reply thoroughly. Reply in user language."
                         )
                         if (visionResult.isSuccess) {
                             val text = visionResult.getOrThrow().text
@@ -2151,10 +2151,10 @@ class DecisionEngine @Inject constructor(
 
             val response = aiRepository.sendMessage(
                 messages = listOf(
-                    com.pai.android.data.model.Message.createSystemMessage("file_analysis", "Ты аналитик файлов. Анализируй содержимое и отвечай на вопросы пользователя."),
+                    com.pai.android.data.model.Message.createSystemMessage("file_analysis", "You are a file analyst. Analyze the content and answer user questions. Reply in user language."),
                     com.pai.android.data.model.Message.createUserMessage("file_analysis", prompt)
                 ),
-                systemPrompt = "Анализируй содержимое файла. Дай структурированный ответ.",
+                systemPrompt = "Analyze the file content. Provide a structured response. Reply in user language.",
                 memoryContext = ""
             )
 

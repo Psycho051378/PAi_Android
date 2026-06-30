@@ -607,4 +607,14 @@
     <string name="provider_name_openai">OpenAI</string>
     <string name="provider_name_ollama">Ollama</string>
 
+    <!-- Local model auto-unload -->
+    <string name="provider_auto_unload_title">Автовыгрузка при уходе на сеть</string>
+    <string name="provider_auto_unload_never">Никогда</string>
+    <string name="provider_auto_unload_30s">30 сек</string>
+    <string name="provider_auto_unload_5m">5 мин</string>
+    <string name="provider_auto_unload_desc_always">Локальная модель всегда в памяти</string>
+    <string name="provider_auto_unload_desc_30s">Модель выгрузится через 30 секунд бездействия сети</string>
+    <string name="provider_auto_unload_desc_5m">Модель выгрузится через 5 минут бездействия сети</string>
+    <string name="provider_auto_unload_desc_custom">Модель выгрузится через %dс бездействия сети</string>
+
 </resources>

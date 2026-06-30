@@ -111,11 +111,11 @@ class WeatherTool(
                 1. Используй эмодзи (☀️ 🌤 ⛅ ☁️ 🌧 🌨 ⛈ 🌡 💨 💧)
                 2. Каждый день — отдельный блок
                 3. В конце — краткое резюме (самый тёплый/холодный день)
-                4. Пиши на русском. Max 20 строк.
+                4. Reply in user language. Max 20 lines.
             """.trimIndent()
             val response = ai.sendMessage(
                 messages = listOf(Message.createUserMessage("weather_format", prompt)),
-                systemPrompt = "Ты метеоролог. Форматируй прогноз погоды.",
+                systemPrompt = "You are a meteorologist. Format the weather forecast.",
                 memoryContext = ""
             )
             response.getOrThrow().text.ifBlank { rawOutput.take(2000) }

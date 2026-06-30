@@ -277,12 +277,12 @@ class WebSearchTool constructor(
                 Результаты поиска:
                 ${rawResults.take(4000)}
                 
-                Суммаризируй: выдели главное, ключевые факты.
-                Ответ на русском, с эмодзи, кратко.
+                Summarize: highlight key points and facts.
+                Reply in user language, with emoji, concise.
             """.trimIndent()
             val response = ai.sendMessage(
                 messages = listOf(Message.createUserMessage("search_summary", prompt)),
-                systemPrompt = "Ты аналитик. Суммаризируй поиск.",
+                systemPrompt = "You are an analyst. Summarize search results.",
                 memoryContext = ""
             )
             response.getOrThrow().text.ifBlank { rawResults }
