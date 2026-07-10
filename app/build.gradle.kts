@@ -71,6 +71,7 @@ android {
 chaquopy {
     defaultConfig {
         buildPython("C:/Users/Arthomas/AppData/Local/Programs/Python/Python311/python.exe")
+        version = "3.11"
         pip {
             install("requests")
             install("aiohttp")
@@ -91,6 +92,8 @@ chaquopy {
             install("croniter")
             install("python-telegram-bot")
             install("psutil")
+            install("tplinkrouterc6u")
+            install("python-miio")
         }
     }
 }

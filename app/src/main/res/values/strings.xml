@@ -458,6 +458,33 @@
 
     <!-- RouterSettingsScreen -->
     <string name="router_settings_title">Настройки сети</string>
+    <string name="manufacturer_auth_title">Авторизация производителей</string>
+    <string name="manufacturer_auth_description">Xiaomi Mi Cloud, Яндекс и другие</string>
+    <string name="manufacturer_auth_configure">Настроить</string>
+    <string name="manufacturer_auth_screen_title">Авторизация производителей</string>
+    <string name="manufacturer_auth_how_it_works">Некоторые устройства требуют получения локального токена через облачное API производителя. Xiaomi — введите логин и пароль от Mi аккаунта. Токены будут получены автоматически и сохранены в локальной базе для управления пылесосом, увлажнителем и другими Mi Home устройствами.</string>
+    <string name="manufacturer_auth_mi_home">Mi Home (Xiaomi)</string>
+    <string name="manufacturer_auth_login_label">Логин (email)</string>
+    <string name="manufacturer_auth_password_label">Пароль</string>
+    <string name="manufacturer_auth_save">Сохранить</string>
+    <string name="manufacturer_auth_delete">Удалить</string>
+    <string name="manufacturer_auth_sync">Получить токены из Mi Cloud</string>
+    <string name="manufacturer_auth_syncing">Синхронизация...</string>
+    <string name="manufacturer_auth_saved">✅ Данные Xiaomi сохранены</string>
+    <string name="manufacturer_auth_deleted">✅ Данные Xiaomi удалены</string>
+    <string name="manufacturer_auth_no_credentials">❌ Сначала введи логин и пароль Xiaomi</string>
+    <string name="manufacturer_auth_sync_complete">✅ Синхронизация завершена. Найдено токенов: %d, сохранено для наших устройств: %d</string>
+    <string name="manufacturer_auth_devices_with_tokens">Устройства с токенами</string>
+    <string name="manufacturer_auth_token_status">✅ — токен получен, устройством можно управлять
+⏳ — токен не получен, устройство только обнаружено</string>
+    <string name="manufacturer_auth_no_token_for_ip">Токен не найден для %s. Авторизуй Xiaomi в настройках.</string>
+    <string name="manufacturer_auth_yandex_placeholder">Поддержка Яндекс.Станции будет добавлена позже.</string>
+    <string name="manufacturer_auth_token_instruction">Для управления устройствами Xiaomi (пылесос, увлажнитель) необходим device token. Введи токен вручную (32 hex-символа), полученный через сторонние утилиты (например, дамп Mi Home приложения).</string>
+    <string name="manufacturer_auth_token_saved">✅ Токен сохранён</string>
+    <string name="manufacturer_auth_clear">Очистить</string>
+    <string name="manufacturer_auth_no_devices">Устройства Xiaomi не найдены. Сначала отсканируй домашнюю сеть.</string>
+    <string name="manufacturer_auth_enter_tokens">Введи токены для управления устройствами</string>
+    <string name="manufacturer_auth_refresh">Обновить список</string>
 
     <!-- Missing ProviderSettings labels -->
     <string name="provider_default_model_label">Модель по умолчанию</string>

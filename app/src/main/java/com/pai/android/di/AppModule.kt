@@ -10,6 +10,11 @@ import com.pai.android.data.local.AttachmentDao
 import com.pai.android.data.local.MIGRATION_19_20
 import com.pai.android.data.local.MIGRATION_20_21
 import com.pai.android.data.local.MIGRATION_21_22
+import com.pai.android.data.local.MIGRATION_24_25
+import com.pai.android.data.local.ManufacturerAuthDao
+import com.pai.android.data.local.SmartHomeDao
+import com.pai.android.data.repository.SmartHomeRepository
+import com.pai.android.agent.skills.home.device.SmartHomeDispatcher
 import com.pai.android.data.local.GeoTaskDao
 import com.pai.android.data.local.ChatDao
 import com.pai.android.data.local.MemoryDao
@@ -52,6 +57,7 @@ import com.pai.android.agent.skills.NotificationSkill
 import com.pai.android.agent.skills.HomeSkill
 import com.pai.android.agent.skills.SmsSkill
 import com.pai.android.agent.skills.home.router.RouterScanner
+import com.pai.android.agent.skills.home.router.RouterScannerPython
 import com.pai.android.agent.OpenFileSkill
 import com.pai.android.agent.AppLaunchSkill
 import com.pai.android.agent.AgentPlanner
@@ -77,6 +83,7 @@ import com.pai.android.agent.tools.ContextTool
 import com.pai.android.agent.tools.ClipboardTool
 import com.pai.android.agent.tools.CalendarTool
 import com.pai.android.agent.tools.MapsTool
+import com.pai.android.agent.tools.DeviceSensorTool
 import com.pai.android.agent.WeatherSkill
 import com.pai.android.agent.ContextEngine
 import com.pai.android.agent.skills.OfficeSkill
@@ -583,7 +590,7 @@ object AppModule {
             AppDatabase::class.java,
             "pai_database"
         )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22) // Явные миграции с версии 1 на 22
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_24_25) // Явные миграции с версии 1 на 22, затем 24→25 (v23 destructive fallback)
         .fallbackToDestructiveMigration() // Уничтожает БД при несовпадении схемы (резерв)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
@@ -654,17 +661,44 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSmartHomeDao(database: AppDatabase): SmartHomeDao {
+        return database.smartHomeDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideManufacturerAuthDao(database: AppDatabase): ManufacturerAuthDao {
+        return database.manufacturerAuthDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideGeoTaskRepository(dao: GeoTaskDao): GeoTaskRepository {
         return GeoTaskRepository(dao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSmartHomeRepository(
+        smartHomeDao: SmartHomeDao
+    ): com.pai.android.data.repository.SmartHomeRepository {
+        return com.pai.android.data.repository.SmartHomeRepository(smartHomeDao)
     }
     
     @Provides
     @Singleton
     fun provideRouterScanner(
         @ApplicationContext context: Context,
-        okHttpClient: OkHttpClient
+        okHttpClient: OkHttpClient,
+        routerScannerPython: RouterScannerPython
     ): RouterScanner {
-        return RouterScanner(context, okHttpClient)
+        return RouterScanner(context, okHttpClient, routerScannerPython)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRouterScannerPython(): RouterScannerPython {
+        return RouterScannerPython()
     }
     
     // ============= Network =============
@@ -1082,10 +1116,14 @@ object AppModule {
     fun provideHomeSkill(
         @ApplicationContext context: android.content.Context,
         memoryRepository: MemoryRepository,
+        smartHomeRepository: SmartHomeRepository,
+        smartHomeDispatcher: SmartHomeDispatcher,
+        aiRepository: AiRepository,
         okHttpClient: OkHttpClient,
-        routerScanner: RouterScanner
+        routerScanner: RouterScanner,
+        routerScannerPython: RouterScannerPython
     ): HomeSkill {
-        return HomeSkill(context, memoryRepository, okHttpClient, routerScanner)
+        return HomeSkill(context, memoryRepository, smartHomeRepository, smartHomeDispatcher, aiRepository, okHttpClient, routerScanner, routerScannerPython)
     }
 
     @Provides
@@ -1165,6 +1203,7 @@ object AppModule {
         smsTool: com.pai.android.agent.tools.SmsTool,
         contactsTool: com.pai.android.agent.tools.ContactsTool,
         launchAppTool: com.pai.android.agent.tools.LaunchAppTool,
+        deviceSensorTool: DeviceSensorTool,
         locationService: LocationService,
         contextEngine: ContextEngine,
         intentRecognizer: IntentRecognizer,
@@ -1207,6 +1246,7 @@ object AppModule {
         toolRegistry.register(smsTool)
         toolRegistry.register(contactsTool)
         toolRegistry.register(launchAppTool)
+        toolRegistry.register(deviceSensorTool)
         println("🔧 Зарегистрировано инструментов: ${toolRegistry.getAllTools().size}")
         
         // Регистрируем инструменты как навыки (через адаптер)
@@ -1238,6 +1278,7 @@ object AppModule {
         skillRegistry.register(com.pai.android.agent.skills.LocationSkill(context, locationService))
         skillRegistry.register(homeSkill)
         skillRegistry.register(com.pai.android.agent.skills.GeoSkill(context, geoTaskRepository, locationService))
+        skillRegistry.register(ToolSkillAdapter(deviceSensorTool))
         println("🔧 HomeSkill registered: enabled=" + com.pai.android.agent.skills.HomeSkill.enabled)
         
         // Load installed external skills from persistence

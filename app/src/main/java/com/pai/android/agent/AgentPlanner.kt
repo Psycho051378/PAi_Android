@@ -64,7 +64,8 @@ class AgentPlanner @Inject constructor(
             "home" to "control smart home devices (router, lights, etc.)",
             "ai_chat" to "direct AI answer without tools",
             "notif_listener" to "check if Android notification listener is active, check listener status, or open Android notification access settings. Use for 'status of notifications', 'notification access', 'notification listener' queries",
-            "get_context" to "get full device context snapshot: current time, location, battery level, notification buffer status, proactive settings, active tasks"
+            "get_context" to "get full device context snapshot: current time, location, battery level, notification buffer status, proactive settings, active tasks",
+            "device_sensors" to "read the PHONE'S OWN hardware sensors. ONLY for queries about the phone/device itself: 'phone temperature', 'battery temperature', 'how hot is the phone', 'ambient light sensor', 'barometer/pressure', 'proximity'. CRITICAL: This is NOT weather - do NOT use for weather forecasts, outdoor temperature, or climate. For weather/outdoor temperature use 'weather' skill."
         )
     }
 
@@ -138,7 +139,7 @@ class AgentPlanner @Inject constructor(
         val lower = query.lowercase()
 
         // Погода без уточнений → one-step
-        val weatherPatterns = listOf("погод", "weather", "температур", "градус", "дожд", "снег")
+        val weatherPatterns = listOf("погод", "weather", "градус", "дожд", "снег")
         if (weatherPatterns.any { lower.contains(it) }) {
             val city = extractCity(query)
             val days = extractDays(query)
@@ -418,7 +419,7 @@ EXAMPLES:
             "акци", "ценн", "обстановк",
             "ставк", "инфляци", "валюта", 
             "доллар", "евро", "биткоин",
-            "погод", "температур",
+            "погод",
             "рейтинг", "топ", "лучш",
             "сколько сто", "какой сегод", "какая сегод",
             "отзыв", "рекоменду",
@@ -433,7 +434,7 @@ EXAMPLES:
             "today", "now",
             "stock", "market", "price",
             "rate", "exchange",
-            "weather", "temperature",
+            "weather",
             "what is", "how to", "why did",
             "review", "recommend",
             "who is", "tell me about"
