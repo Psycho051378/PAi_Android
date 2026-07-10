@@ -17,6 +17,7 @@ import com.pai.android.data.model.DeviceProtocol
 import com.pai.android.agent.skills.home.detector.DeviceTypeDetector
 import com.pai.android.agent.skills.home.detector.DeviceNameGenerator
 import com.pai.android.agent.skills.home.device.SmartHomeDispatcher
+import com.pai.android.agent.skills.home.device.BlindDispatcher
 import com.pai.android.agent.skills.home.device.CapabilityRegistry
 import com.pai.android.agent.skills.home.device.DeviceCommand
 import com.pai.android.data.repository.AiRepository
@@ -47,6 +48,7 @@ class HomeSkill @Inject constructor(
     private val memoryRepository: MemoryRepository,
     private val smartHomeRepository: SmartHomeRepository,
     private val smartHomeDispatcher: SmartHomeDispatcher,
+    private val blindDispatcher: BlindDispatcher,
     private val aiRepository: AiRepository,
     private val okHttpClient: OkHttpClient,
     private var routerScanner: RouterScanner? = null,
@@ -709,31 +711,61 @@ class HomeSkill @Inject constructor(
             )
         }
         val network = smartHomeRepository.getNetworkBySsid(ssid)
-        if (network == null) {
-            return SkillResult.Success(
-                message = "❌ Нет данных о сети. Сначала скажи «сканируй сеть».",
-                responseType = ResponseType.TEXT
-            )
-        }
-        return try {
-            // 1. Пробуем LLM-driven dispatch
-            val devices = smartHomeRepository.getManageableDevices(network.id)
-            if (devices.isNotEmpty()) {
-                val commands = generateLLMCommands(query, devices)
-                if (commands != null && commands.isNotEmpty()) {
-                    val result = smartHomeDispatcher.dispatchCommands(commands)
-                    println("HomeSkill: LLM dispatch result: ${result.take(100)}")
+
+        // ==================== ADDRESSED MODE ====================
+        // Если есть сохранённая сеть с управляемыми устройствами — используем её
+        if (network != null) {
+            try {
+                val devices = smartHomeRepository.getManageableDevices(network.id)
+                if (devices.isNotEmpty()) {
+                    // 1. LLM-driven dispatch
+                    val commands = generateLLMCommands(query, devices)
+                    if (commands != null && commands.isNotEmpty()) {
+                        val result = smartHomeDispatcher.dispatchCommands(commands)
+                        println("HomeSkill: LLM dispatch result: ${result.take(100)}")
+                        return SkillResult.Success(message = result, responseType = ResponseType.TEXT)
+                    }
+
+                    // 2. Fallback к ControlIntentParser
+                    println("HomeSkill: LLM dispatch failed, fallback to ControlIntentParser")
+                    val result = smartHomeDispatcher.dispatch(query, network.id)
                     return SkillResult.Success(message = result, responseType = ResponseType.TEXT)
                 }
+                // Устройства есть в БД, но ни одно не управляемое — проваливаемся в Blind
+                println("HomeSkill: network exists but no manageable devices, trying blind mode")
+            } catch (e: Exception) {
+                println("HomeSkill: addressed dispatch error: ${e.message}")
             }
+        }
 
-            // 2. Fallback к старому ControlIntentParser
-            println("HomeSkill: LLM dispatch failed / no devices, fallback to ControlIntentParser")
-            val result = smartHomeDispatcher.dispatch(query, network.id)
+        // ==================== BLIND MODE ====================
+        // Нет базы для сети или нет управляемых устройств → работаем вслепую
+        return doBlindControl(query)
+    }
+
+    /**
+     * Управление устройствами вслепую — без базы устройств.
+     * - WiZ: broadcast на 255.255.255.255:38899
+     * - Yeelight: ping sweep подсети + probe на порт 55443
+     */
+    private suspend fun doBlindControl(query: String): SkillResult {
+        return try {
+            println("HomeSkill: blind control: query='$query'")
+
+            // Получаем список IP для Yeelight probe (если есть)
+            val subnet = getSubnet()
+            val ips = if (subnet.isNotBlank()) {
+                val baseParts = subnet.split("/")[0].split(".")
+                if (baseParts.size == 4) {
+                    (1..254).map { "${baseParts[0]}.${baseParts[1]}.${baseParts[2]}.$it" }
+                } else emptyList()
+            } else emptyList()
+
+            val result = blindDispatcher.dispatchQuery(query, ips)
             SkillResult.Success(message = result, responseType = ResponseType.TEXT)
         } catch (e: Exception) {
             SkillResult.Success(
-                message = "❌ Ошибка управления: ${e.message}",
+                message = "❌ Blind-управление: ${e.message ?: "неизвестная ошибка"}",
                 responseType = ResponseType.TEXT
             )
         }

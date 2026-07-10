@@ -14,6 +14,7 @@ import com.pai.android.data.local.MIGRATION_24_25
 import com.pai.android.data.local.ManufacturerAuthDao
 import com.pai.android.data.local.SmartHomeDao
 import com.pai.android.data.repository.SmartHomeRepository
+import com.pai.android.agent.skills.home.device.BlindDispatcher
 import com.pai.android.agent.skills.home.device.SmartHomeDispatcher
 import com.pai.android.data.local.GeoTaskDao
 import com.pai.android.data.local.ChatDao
@@ -1118,12 +1119,13 @@ object AppModule {
         memoryRepository: MemoryRepository,
         smartHomeRepository: SmartHomeRepository,
         smartHomeDispatcher: SmartHomeDispatcher,
+        blindDispatcher: BlindDispatcher,
         aiRepository: AiRepository,
         okHttpClient: OkHttpClient,
         routerScanner: RouterScanner,
         routerScannerPython: RouterScannerPython
     ): HomeSkill {
-        return HomeSkill(context, memoryRepository, smartHomeRepository, smartHomeDispatcher, aiRepository, okHttpClient, routerScanner, routerScannerPython)
+        return HomeSkill(context, memoryRepository, smartHomeRepository, smartHomeDispatcher, blindDispatcher, aiRepository, okHttpClient, routerScanner, routerScannerPython)
     }
 
     @Provides
