@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Intent
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import com.pai.android.agent.tools.LocaleManager
 import com.pai.android.data.repository.VoiceSettingsRepository
 import com.pai.android.service.WakeWordService
@@ -39,6 +41,17 @@ class PaiApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // Инициализация Chaquopy Python runtime (должен быть до Python.getInstance())
+        try {
+            if (!Python.isStarted()) {
+                Python.start(AndroidPlatform(this))
+                android.util.Log.i("PaiApp", "Chaquopy Python started successfully")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("PaiApp", "Chaquopy Python start failed", e)
+        }
+
         localeManager = LocaleManager(this)
         localeManager.applyLocale(this)
         // Init Logger to capture println() into ring buffer

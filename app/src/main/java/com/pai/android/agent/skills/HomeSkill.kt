@@ -9,12 +9,25 @@ import com.pai.android.agent.Skill
 import com.pai.android.agent.SkillResult
 import com.pai.android.agent.ResponseType
 import com.pai.android.data.repository.MemoryRepository
+import com.pai.android.data.repository.SmartHomeRepository
+import com.pai.android.data.model.SmartHomeNetwork
+import com.pai.android.data.model.SmartHomeDevice
+import com.pai.android.data.model.DeviceType
+import com.pai.android.data.model.DeviceProtocol
+import com.pai.android.agent.skills.home.detector.DeviceTypeDetector
+import com.pai.android.agent.skills.home.detector.DeviceNameGenerator
+import com.pai.android.agent.skills.home.device.SmartHomeDispatcher
+import com.pai.android.agent.skills.home.device.CapabilityRegistry
+import com.pai.android.agent.skills.home.device.DeviceCommand
+import com.pai.android.data.repository.AiRepository
+import com.pai.android.data.model.Message
 import com.pai.android.agent.skills.home.TcpScanner
 import com.pai.android.agent.skills.home.HttpProber
 import com.pai.android.agent.skills.home.MulticastDiscovery
 import com.pai.android.agent.skills.home.UdpProber
 import com.pai.android.agent.skills.home.FingerprintDb
 import com.pai.android.agent.skills.home.router.RouterScanner
+import com.pai.android.agent.skills.home.router.RouterScannerPython
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.OkHttpClient
 import kotlinx.coroutines.Dispatchers
@@ -32,13 +45,14 @@ import javax.inject.Singleton
 class HomeSkill @Inject constructor(
     @ApplicationContext private val context: Context,
     private val memoryRepository: MemoryRepository,
+    private val smartHomeRepository: SmartHomeRepository,
+    private val smartHomeDispatcher: SmartHomeDispatcher,
+    private val aiRepository: AiRepository,
     private val okHttpClient: OkHttpClient,
-    private var routerScanner: RouterScanner? = null
+    private var routerScanner: RouterScanner? = null,
+    private val routerScannerPython: RouterScannerPython? = null
 ) : Skill {
 
-    /**
-     * Позволяет установить RouterScanner после создания (для циклической зависимости).
-     */
     fun updateRouterScanner(scanner: RouterScanner) {
         this.routerScanner = scanner
     }
@@ -47,13 +61,30 @@ class HomeSkill @Inject constructor(
     override val description: String =
         "Умный дом: сканирование Wi-Fi сети, идентификация устройств и управление"
 
+    override fun getToolSchema(): String = """
+{
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "enum": ["home_scan", "home_control"],
+      "description": "home_scan — просканировать Wi-Fi сеть и найти новые устройства. ОБЫЧНО НЕ НУЖНО, устройства уже найдены. Используй только если пользователь явно попросил сканировать.\nhome_control — запрос на управление устройствами. Используй для ЛЮБЫХ запросов про умный дом: включить/выключить, изменить цвет/яркость, запросить статус, переименовать"
+    },
+    "query": {
+      "type": "string",
+      "description": "Текст запроса пользователя. Примеры: «включи свет», «выключи пылесос», «сделай лампу 2 зелёной», «что с пылесосом», «отправь на базу», «статус», «сколько заряда», «переименуй пылесос в Уборщик», «сделай теплее», «яркость 70%»"
+    }
+  },
+  "required": ["command"]
+}
+""".trimIndent()
+
     companion object {
         @Volatile var enabled: Boolean = true
         private const val PREFS_NAME = "home_skill"
         private const val PREF_ROUTER_CONFIG = "router_config"
     }
 
-    // ── Router config (SharedPreferences, как EmailSkill) ──
     private val prefs by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -103,60 +134,117 @@ class HomeSkill @Inject constructor(
         return getRouterConfig()?.enabled ?: false
     }
 
-    // ── canHandle ──
     override fun canHandle(intent: AgentIntent, query: String, params: Map<String, Any>): Boolean {
         if (!enabled) return false
         if (intent == AgentIntent.TOOL_OPERATION && params["command"] == name) return true
         val lower = query.lowercase()
+        // Russian + English keywords for home automation
         return lower.contains("сканируй сеть") || lower.contains("что в сети") ||
-                lower.contains("умный дом") || lower.contains("найди устройства") ||
+                lower.contains("умный дом") || lower.contains("найди устройства") || lower.contains("найди устройств") ||
                 lower.contains("настрой роутер") || lower.contains("роутер") &&
                 (lower.contains("пароль") || lower.contains("настрой") || lower.contains("логин")) ||
                 lower.contains("включи") || lower.contains("выключи") ||
-                lower.contains("home") || lower.contains("arp")
+                lower.contains("уборк") || lower.contains("clean") || lower.contains("vacuum") ||
+                lower.contains("увлажнитель") || lower.contains("humidifier") ||
+                lower.contains("пылесос") || lower.contains("запусти") ||
+                lower.contains("на базу") || lower.contains("на зарядк") || lower.contains("заряжай") || lower.contains("зарядк") || lower.contains("заряд") ||
+                lower.contains("статус") || lower.contains("яркость") || lower.contains("brightness") ||
+                lower.contains("цвет") || lower.contains("color") ||
+                lower.contains("lamp") || lower.contains("ламп") || lower.contains("свет") || lower.contains("light") ||
+                lower.contains("тепл") || lower.contains("cold") || lower.contains("warm") ||
+                lower.contains("home") || lower.contains("arp") || lower.contains("smart home") ||
+                lower.contains("scan network") || lower.contains("scan") ||
+                lower.contains("find devices") || lower.contains("discover") ||
+                lower.contains("turn on") || lower.contains("turn off") || lower.contains("switch on") || lower.contains("switch off") ||
+                lower.contains("start") || lower.contains("begin") ||
+                lower.contains("configure router") || lower.contains("router password") || lower.contains("router setup") || lower.contains("router config") ||
+                lower.contains("show devices") || lower.contains("list devices") || lower.contains("what devices") || lower.contains("status")
     }
 
-    // ── execute ──
     override suspend fun execute(params: Map<String, Any>): SkillResult = withContext(Dispatchers.IO) {
         try {
+            // Собираем query из params: либо явный query, либо command + остальные поля
+            val command = params["command"] as? String ?: ""
             val query = params["query"] as? String ?: params["q"] as? String ?: ""
-            // Если query пустой — AI вызвал нас без контекста, сканируем по умолчанию
-            if (query.isBlank()) {
-                println("HomeSkill: empty query, defaulting to scan")
-                doScan()
-            } else {
-                when (classifyIntent(query)) {
+
+            // Если явный запрос есть — классифицируем
+            if (query.isNotBlank()) {
+                println("HomeSkill: execute with query='$query'")
+                return@withContext when (classifyIntent(query)) {
                     IntentType.SCAN -> doScan()
                     IntentType.STATUS -> getStatus()
                     IntentType.CONFIGURE_ROUTER -> configureRouter(query)
                     IntentType.CONTROL -> doControl(query)
-                    else -> doScan() // не распознали — тоже сканируем
+                    else -> doControl(query)
                 }
+            }
+
+            // Если query пустой, но есть command — строим из params
+            val deviceName = params["device_name"] as? String ?: params["name"] as? String ?: ""
+            val deviceIp = params["device_ip"] as? String ?: params["ip"] as? String ?: ""
+
+            val computedQuery = when (command) {
+                "home_scan" -> return@withContext doScan()
+                "home_control" -> return@withContext doControl(deviceName)
+                "get_status" -> "статус ${deviceName.ifBlank { deviceIp }}"
+                "turn_on" -> "включи ${deviceName.ifBlank { deviceIp }}"
+                "turn_off" -> "выключи ${deviceName.ifBlank { deviceIp }}"
+                "charge" -> "отправь на базу ${deviceName.ifBlank { deviceIp }}"
+                "set_brightness" -> "яркость ${params["level"] ?: 50} ${deviceName.ifBlank { deviceIp }}"
+                "set_rgb" -> "цвет ${params["color"] ?: params["r"] ?: ""} ${deviceName.ifBlank { deviceIp }}"
+                else -> {
+                    // Неизвестная команда — собираем из всех params
+                    params.filterKeys { it !in listOf("command", "tool_name", "toolCallId") }
+                        .map { "${it.key}=${it.value}" }
+                        .joinToString(" ")
+                }
+            }
+
+            return@withContext if (computedQuery.isNotBlank()) {
+                println("HomeSkill: computed query from params: '$computedQuery'")
+                doControl(computedQuery)
+            } else {
+                println("HomeSkill: empty query and unknown command, defaulting to scan")
+                doScan()
             }
         } catch (e: Exception) {
             SkillResult.Error(message = "HomeSkill error: ${e.message ?: "Unknown"}")
         }
     }
 
-    // ── Intent classification ──
     private enum class IntentType { SCAN, STATUS, CONFIGURE_ROUTER, CONTROL, UNKNOWN }
 
     private fun classifyIntent(query: String): IntentType {
         val lower = query.lowercase()
         return when {
-            lower.contains("сканируй") || lower.contains("найди устройств") -> IntentType.SCAN
+            // SCAN — Russian + English
+            lower.contains("сканируй") || lower.contains("найди устройств") ||
+            lower.contains("scan") || lower.contains("discover") || lower.contains("find devices") ||
+            lower.contains("network scan") -> IntentType.SCAN
+            // STATUS — Russian + English
             lower.contains("что в сети") || lower.contains("статус") ||
-                    lower.contains("покажи") || lower.contains("список") -> IntentType.STATUS
+            lower.contains("покажи") || lower.contains("список") ||
+            lower.contains("status") || lower.contains("show devices") || lower.contains("list devices") ||
+            lower.contains("what devices") || lower.contains("what's in the network") ||
+            lower.contains("show me devices") -> IntentType.STATUS
+            // CONFIGURE ROUTER — Russian + English
             lower.contains("настрой роутер") || lower.contains("пароль от роутер") ||
-                    lower.contains("роутер парол") || lower.contains("логин роутер") ||
-                    lower.contains("router password") || lower.contains("router config") -> IntentType.CONFIGURE_ROUTER
+            lower.contains("роутер парол") || lower.contains("логин роутер") ||
+            lower.contains("configure router") || lower.contains("router password") ||
+            lower.contains("router setup") || lower.contains("router config") -> IntentType.CONFIGURE_ROUTER
+            // CONTROL — Russian + English
             lower.contains("включи") || lower.contains("выключи") ||
-                    lower.contains("on") || lower.contains("off") -> IntentType.CONTROL
+            lower.contains("уборк") || lower.contains("clean") || lower.contains("vacuum") ||
+            lower.contains("увлажнитель") || lower.contains("humidifier") ||
+            lower.contains("пылесос") || lower.contains("запусти") ||
+            lower.contains("turn on") || lower.contains("turn off") ||
+            lower.contains("switch on") || lower.contains("switch off") ||
+            lower.contains("start") || lower.contains("begin") ||
+            lower.contains("on") || lower.contains("off") -> IntentType.CONTROL
             else -> IntentType.UNKNOWN
         }
     }
 
-    // ── SCAN ──
     private suspend fun doScan(): SkillResult {
         println("HomeSkill: doScan started")
         val httpProber = HttpProber(okHttpClient)
@@ -177,31 +265,21 @@ class HomeSkill @Inject constructor(
             )
         }
 
-        // 1. Ping sweep — наполняет ARP кэш устройствами
         val aliveHosts = pingSweep(subnet)
-
-        // 2. TCP sweep — проверяем порт 80 на всей подсети (находит устройства, блокирующие ICMP)
         println("HomeSkill: starting TCP sweep (port 80) for all hosts...")
         val tcpAlive = tcpSweep(subnet)
         println("HomeSkill: TCP sweep found ${tcpAlive.size} additional hosts")
-
-        // 3. mDNS + SSDP multicast discovery
         println("HomeSkill: starting mDNS/SSDP multicast discovery...")
         val mdnsDevices = MulticastDiscovery.discover()
         println("HomeSkill: mDNS/SSDP found ${mdnsDevices.size} devices")
         val mdnsByIp = mdnsDevices.associateBy { it.ip }
-
-        // 4. ARP-таблица — читаем ПОСЛЕ пинга (когда ARP кэш наполнен)
         val arpEntries = readArpTable()
-
         val allIps = (arpEntries.keys + aliveHosts + tcpAlive + mdnsDevices.map { it.ip }).toSet().sorted()
 
-        // UDP probe (CoAP для WiZ, MQTT для Яндекса/Roborock)
         println("HomeSkill: starting UDP/CoAP/MQTT probe for ${allIps.size} hosts...")
         val udpResults = UdpProber.probeAll(allIps)
         println("HomeSkill: UDP probe found ${udpResults.size} devices")
 
-        // NetBIOS MAC discovery (UDP 137)
         println("HomeSkill: starting NetBIOS MAC probe for ${allIps.size} hosts...")
         val netbiosMacs = mutableMapOf<String, String>()
         for (ip in allIps) {
@@ -210,16 +288,14 @@ class HomeSkill @Inject constructor(
         }
         println("HomeSkill: NetBIOS found ${netbiosMacs.size} MACs")
 
-        // TCP scan портов
         println("HomeSkill: starting TCP port scan for ${allIps.size} hosts...")
         val openPorts = TcpScanner.scanPorts(allIps)
         println("HomeSkill: TCP scan done, ${openPorts.size} hosts with open ports")
 
-        // HTTP probe
         val httpInfo = httpProber.probeAll(openPorts)
 
-        // Router ARP (если настроен)
         var routerArp = emptyMap<String, String>()
+        var deviceNames = emptyMap<String, String>()
         try {
             val routerConfig = getRouterConfig()
             val routerScan = routerScanner
@@ -228,13 +304,26 @@ class HomeSkill @Inject constructor(
                 val config = routerConfig.toRouterConfig()
                 routerArp = routerScan.scan(config)
                 println("HomeSkill: router ARP found ${routerArp.size} entries")
+                try {
+                    val py = routerScannerPython
+                    if (py != null) {
+                        val detailed = py.scanDetailed(config)
+                        if (detailed.isNotEmpty()) {
+                            deviceNames = detailed.associate { it.ip to it.name }
+                            println("HomeSkill: got ${deviceNames.size} device names from Python")
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("HomeSkill: Python detailed scan error: ${e.message}")
+                }
             }
         } catch (e: Exception) {
             println("HomeSkill: router scan error: ${e.message}")
         }
 
-        // Формируем ответ
         val sb = StringBuilder()
+        val deviceEntries = mutableListOf<DeviceEntry>()
+
         sb.appendLine("🏠 **Сеть: $ssid**")
         sb.appendLine("┌────────────────────────────────────")
         sb.appendLine("│ IP устройства: $myIp")
@@ -249,123 +338,225 @@ class HomeSkill @Inject constructor(
         } else {
             for ((i, ip) in allIps.withIndex()) {
                 val ports = openPorts[ip]
-                val info = httpInfo[ip]
-                val udp = udpResults[ip]
+                val httpProbeResult = httpInfo[ip]
+                val udpProbeResult = udpResults[ip]
                 val mdnsDevice = mdnsByIp[ip]
-                val macRaw = info?.mac ?: udp?.mac ?: mdnsDevice?.mac ?: netbiosMacs[ip] ?: arpEntries[ip] ?: routerArp[ip] ?: "?"
+                val macRaw = httpProbeResult?.mac ?: udpProbeResult?.mac ?: mdnsDevice?.mac
+                    ?: netbiosMacs[ip] ?: arpEntries[ip] ?: routerArp[ip] ?: "?"
                 val mac = if (macRaw == "00:00:00:00:00:00") "?" else macRaw
                 val vendor = if (mac != "?") guessVendor(mac) else ""
 
+                val hostname = deviceNames[ip] ?: ""
+                val httpFingerprint = httpProbeResult?.fingerprint
+                val udpFingerprint = udpProbeResult?.fingerprint
+
+                val typeInfo = DeviceTypeDetector.detect(
+                    hostname = hostname,
+                    openPorts = ports ?: emptyList(),
+                    udpFingerprint = udpFingerprint,
+                    httpFingerprint = httpFingerprint
+                )
+                val controlPort = when (typeInfo.protocol) {
+                    DeviceProtocol.WIZ -> 38899
+                    DeviceProtocol.YEELIGHT -> 55443
+                    else -> ports?.firstOrNull() ?: 0
+                }
+                val capabilities = DeviceTypeDetector.getCapabilities(typeInfo.deviceType, typeInfo.protocol)
+
+                // Собираем метаданные как простой JSON-строку
+                val metaJson = org.json.JSONObject().apply {
+                    put("httpTitle", httpProbeResult?.title ?: "")
+                    put("httpServer", httpProbeResult?.server ?: "")
+                    put("httpFingerprint", httpFingerprint ?: "")
+                    put("udpFingerprint", udpFingerprint ?: "")
+                    put("udpProtocol", udpProbeResult?.protocol ?: "")
+                    put("mdnsServiceType", mdnsDevice?.serviceType ?: "")
+                    put("mdnsFriendlyName", mdnsDevice?.friendlyName ?: "")
+                    put("mdnsHostname", mdnsDevice?.hostname ?: "")
+                }.toString()
+
+                deviceEntries.add(
+                    DeviceEntry(
+                        ip = ip,
+                        mac = mac,
+                        hostname = hostname,
+                        deviceTypeName = typeInfo.deviceType.name,
+                        protocolName = typeInfo.protocol.name,
+                        port = controlPort,
+                        capabilitiesJson = org.json.JSONArray(capabilities).toString(),
+                        vendor = vendor.trim(),
+                        metadataJson = metaJson
+                    )
+                )
+
                 sb.appendLine("${i + 1}. **$ip**")
-                
-                // Тип устройства — сначала HTTP fingerprint, потом UDP fingerprint, потом mDNS
-                val deviceLabel = when (info?.fingerprint) {
-                    "sonoff_tasmota" -> "💡 Sonoff/Tasmota"
-                    "shelly" -> "💡 Shelly"
-                    "esphome" -> "🔧 ESPHome"
-                    "home_assistant" -> "🏠 Home Assistant"
-                    "yeelight" -> "💡 Yeelight"
-                    "tp_link" -> "📡 TP-Link"
-                    "dlink_router" -> "📡 D-Link"
-                    "keenetic_router" -> "📡 Keenetic"
-                    "router" -> "📡 Роутер"
-                    "ip_camera" -> "📹 IP-камера"
-                    "xiaomi" -> "🔷 Xiaomi"
-                    "philips_hue" -> "💡 Philips Hue"
-                    "broadlink" -> "📡 BroadLink"
-                    "wiz_light" -> "💡 WiZ"
-                    "plex" -> "🎬 Plex"
-                    "apple" -> "🍎 Apple"
-                    "ubiquiti" -> "📡 Ubiquiti"
-                    "yandex_station" -> "🔊 Яндекс Станция"
-                    "web_server" -> "🖥 ПК Пигмалион"
-                    "mqtt_device" -> "📡 Умное устройство (MQTT)"
-                    "roborock" -> "🧹 Roborock"
-                    "yandex_remote" -> "📡 Яндекс Пульт"
-                    else -> {
-                        // Определяем по UDP fingerprint
-                        when (udp?.fingerprint) {
-                            "yeelight" -> "💡 Yeelight"
-                            "xiaomi_humidifier" -> "💨 Увлажнитель Xiaomi"
-                            "xiaomi_plug" -> "🔌 Розетка Xiaomi"
-                            "xiaomi_gateway" -> "🏠 Шлюз Xiaomi"
-                            "xiaomi_light" -> "💡 Лампа Xiaomi"
-                            "xiaomi_airpurifier" -> "🌬 Очиститель Xiaomi"
-                            "xiaomi_ac" -> "❄️ Кондиционер Xiaomi"
-                            "xiaomi_fan" -> "🌀 Вентилятор Xiaomi"
-                            "xiaomi_speaker" -> "🔊 Колонка Xiaomi"
-                            "xiaomi_camera" -> "📹 Камера Xiaomi"
-                            "xiaomi_switch" -> "🔘 Выключатель Xiaomi"
-                            "xiaomi_unknown" -> "🔷 Xiaomi устройство"
-                            "roborock" -> "🧹 Roborock"
-                            else -> FingerprintDb.identify(ip, ports, info, mdnsDevice?.serviceType, null) ?: null
+                val deviceLabel = when (typeInfo.deviceType) {
+                    DeviceType.LIGHT -> "💡 Свет"
+                    DeviceType.VACUUM -> "🧹 Пылесос"
+                    DeviceType.HUMIDIFIER -> "💨 Увлажнитель"
+                    DeviceType.SPEAKER -> "🔊 Колонка"
+                    DeviceType.TV -> "📺 Телевизор"
+                    DeviceType.ESP_DEVICE -> "🔧 ESP-устройство"
+                    DeviceType.ROUTER -> "📡 Роутер"
+                    DeviceType.COMPUTER -> "🖥 Компьютер"
+                    DeviceType.PHONE -> "📱 Телефон"
+                    DeviceType.WEARABLE -> "⌚️ Гаджет"
+                    DeviceType.OTHER -> {
+                        when (httpFingerprint) {
+                            "sonoff_tasmota" -> "💡 Sonoff/Tasmota"
+                            "shelly" -> "💡 Shelly"
+                            "home_assistant" -> "🏠 Home Assistant"
+                            "ip_camera" -> "📹 IP-камера"
+                            "xiaomi" -> "🔷 Xiaomi"
+                            "philips_hue" -> "💡 Philips Hue"
+                            "broadlink" -> "📡 BroadLink"
+                            "plex" -> "🎬 Plex"
+                            "apple" -> "🍎 Apple"
+                            "mqtt_device" -> "📡 MQTT устройство"
+                            "web_server" -> "🖥 Веб-сервер"
+                            else -> when (udpFingerprint) {
+                                "xiaomi_plug" -> "🔌 Розетка Xiaomi"
+                                "xiaomi_gateway" -> "🏠 Шлюз Xiaomi"
+                                "xiaomi_airpurifier" -> "🌬 Очиститель"
+                                "xiaomi_ac" -> "❄️ Кондиционер"
+                                "xiaomi_fan" -> "🌀 Вентилятор"
+                                "xiaomi_switch" -> "🔘 Выключатель"
+                                "xiaomi_unknown" -> "🔷 Xiaomi"
+                                else -> FingerprintDb.identify(ip, ports, httpProbeResult, mdnsDevice?.serviceType, null) ?: "📡 Устройство"
+                            }
                         }
                     }
                 }
-                if (deviceLabel != null) {
-                    sb.appendLine("   $deviceLabel")
-                }
+                sb.appendLine("   $deviceLabel")
                 sb.appendLine("   MAC: $mac $vendor")
+                if (hostname.isNotBlank() && hostname != "?") {
+                    sb.appendLine("   📛 $hostname")
+                }
                 if (ports != null && ports.isNotEmpty()) {
                     sb.appendLine("   🔓 Порты: ${ports.joinToString(", ")}")
                 }
-                if (info?.title != null) {
-                    sb.appendLine("   🌐 ${info.title}")
+                if (httpProbeResult?.title != null) {
+                    sb.appendLine("   🌐 ${httpProbeResult.title}")
                 }
-                if (info?.server != null) {
-                    sb.appendLine("   Сервер: ${info.server}")
+                if (httpProbeResult?.server != null) {
+                    sb.appendLine("   Сервер: ${httpProbeResult.server}")
                 }
-                // Информация из UDP/TCP протоколов
-                if (udp != null && deviceLabel == null) {
-                    when (udp.fingerprint) {
-                        "wiz_light" -> sb.appendLine("   💡 WiZ")
-                        "yeelight" -> sb.appendLine("   💡 Yeelight")
-                        "roborock" -> sb.appendLine("   🧹 Roborock")
-                        "xiaomi_humidifier" -> sb.appendLine("   💨 Увлажнитель")
-                        "xiaomi_plug" -> sb.appendLine("   🔌 Розетка")
-                        "xiaomi_gateway" -> sb.appendLine("   🏠 Шлюз Xiaomi")
-                        "xiaomi_light" -> sb.appendLine("   💡 Лампа")
-                        "xiaomi_airpurifier" -> sb.appendLine("   🌬 Очиститель")
-                        "xiaomi_ac" -> sb.appendLine("   ❄️ Кондиционер")
-                        "xiaomi_fan" -> sb.appendLine("   🌀 Вентилятор")
-                        "xiaomi_speaker" -> sb.appendLine("   🔊 Колонка")
-                        "xiaomi_camera" -> sb.appendLine("   📹 Камера")
-                        "xiaomi_switch" -> sb.appendLine("   🔘 Выключатель")
-                        "xiaomi_tv" -> sb.appendLine("   📺 Телевизор")
-                        "xiaomi_unknown" -> sb.appendLine("   🔷 Xiaomi")
-                        "mqtt_device" -> {
-                            val proto = if (udp.protocol == "mqtts") "MQTT over TLS" else "MQTT"
-                            sb.appendLine("   📡 Умное устройство ($proto)")
-                        }
-                    }
-                }
-                // Информация из mDNS/SSDP
                 val mdns = mdnsByIp[ip]
-                if (mdns != null && deviceLabel == null) {
-                    val mdnsLabel = when (mdns.serviceType) {
-                        "smart_tv" -> "📺 Телевизор"
-                        "audio_receiver" -> "🔊 Аудиосистема"
-                        "printer" -> "🖨 Принтер"
-                        "nas" -> "💾 NAS"
-                        "gateway" -> "📡 Шлюз"
-                        "smart_light" -> "💡 Лампа"
-                        else -> null
+                if (mdns != null && deviceLabel == "📡 Устройство") {
+                    when (mdns.serviceType) {
+                        "smart_tv" -> sb.appendLine("   📺 Телевизор")
+                        "audio_receiver" -> sb.appendLine("   🔊 Аудиосистема")
+                        "printer" -> sb.appendLine("   🖨 Принтер")
+                        "nas" -> sb.appendLine("   💾 NAS")
+                        "gateway" -> sb.appendLine("   📡 Шлюз")
                     }
-                    if (mdnsLabel != null) sb.appendLine("   $mdnsLabel")
-                    if (mdns.friendlyName != null) sb.appendLine("   📛 ${mdns.friendlyName}")
-                    if (mdns.hostname != null) sb.appendLine("   Имя: ${mdns.hostname}")
                 }
+                if (mdns?.friendlyName != null) sb.appendLine("   📛 ${mdns.friendlyName}")
+                if (mdns?.hostname != null) sb.appendLine("   Имя: ${mdns.hostname}")
             }
         }
 
-        // Сохраняем в MemoryRepository
-        val cacheKey = gatewayMac ?: gatewayIp ?: ssid ?: "unknown"
-        saveNetworkCache(cacheKey, ssid, subnet, allIps, arpEntries)
+        try {
+            saveScanResults(ssid, gatewayIp, subnet, deviceEntries)
+        } catch (e: Exception) {
+            println("HomeSkill: saveScanResults error: ${e.message}")
+        }
 
         return SkillResult.Success(message = sb.toString(), responseType = ResponseType.TEXT)
     }
 
-    // ── STATUS ──
+    private data class DeviceEntry(
+        val ip: String,
+        val mac: String,
+        val hostname: String,
+        val deviceTypeName: String,
+        val protocolName: String,
+        val port: Int,
+        val capabilitiesJson: String,
+        val vendor: String,
+        val metadataJson: String
+    )
+
+    private suspend fun saveScanResults(
+        ssid: String,
+        gatewayIp: String?,
+        subnet: String?,
+        deviceEntries: List<DeviceEntry>
+    ) {
+        var network = smartHomeRepository.getNetworkBySsid(ssid)
+        val now = System.currentTimeMillis()
+        if (network != null) {
+            network = network.copy(lastScan = now, gatewayIp = gatewayIp, subnet = subnet)
+        } else {
+            network = SmartHomeNetwork(
+                ssid = ssid,
+                gatewayIp = gatewayIp,
+                subnet = subnet,
+                lastScan = now
+            )
+        }
+        smartHomeRepository.saveNetwork(network)
+        val networkId = network.id
+        println("HomeSkill: saved network '$ssid' (id=$networkId)")
+
+        val existingDevices = smartHomeRepository.getDevices(networkId)
+        val allDevices = mutableListOf<SmartHomeDevice>()
+
+        val llmCall: (suspend (String) -> String?)? = { prompt ->
+            try {
+                val response = aiRepository.sendMessage(
+                    messages = listOf(Message.createUserMessage("naming", prompt)),
+                    systemPrompt = "Ты генератор имён для устройств. Отвечай только именем.",
+                    memoryContext = ""
+                )
+                response.getOrNull()?.text?.trim()
+            } catch (e: Exception) {
+                println("HomeSkill: LLM naming error: ${e.message}")
+                null
+            }
+        }
+
+        for (entry in deviceEntries) {
+            if (entry.mac == "?" || entry.mac.isBlank()) continue
+
+            val existing = existingDevices.find { it.mac.equals(entry.mac, ignoreCase = true) }
+            val displayName = if (existing != null && existing.displayName.isNotBlank()) {
+                existing.displayName
+            } else {
+                DeviceNameGenerator.generateName(
+                    deviceType = entry.deviceTypeName,
+                    existingDevices = existingDevices + allDevices,
+                    metadata = entry.metadataJson,
+                    llmCall = llmCall
+                )
+            }
+
+            val device = SmartHomeDevice(
+                networkId = networkId,
+                mac = entry.mac.uppercase().replace("-", ":"),
+                ip = entry.ip,
+                hostname = entry.hostname,
+                displayName = displayName,
+                deviceType = entry.deviceTypeName,
+                protocol = entry.protocolName,
+                port = entry.port,
+                capabilities = entry.capabilitiesJson,
+                present = true,
+                firstSeen = existing?.firstSeen ?: now,
+                lastSeen = now,
+                vendor = entry.vendor,
+                metadata = entry.metadataJson,
+                // Сохраняем deviceConfig (токены, настройки) из старой записи,
+                // иначе каждое сканирование будет стирать токен!
+                deviceConfig = existing?.deviceConfig ?: "{}"
+            )
+            allDevices.add(device)
+        }
+
+        smartHomeRepository.updateFromScan(networkId, allDevices)
+        println("HomeSkill: saved ${allDevices.size} devices to DB")
+    }
+
     private suspend fun getStatus(): SkillResult {
         val ssid = getSsid()
         val gatewayIp = getGatewayIp()
@@ -379,19 +570,56 @@ class HomeSkill @Inject constructor(
             )
         }
 
-        val cacheKey = gatewayMac ?: gatewayIp ?: ssid ?: "unknown"
-        // Пытаемся загрузить закешированные данные
-        val cached = loadNetworkCache(cacheKey)
+        val network = if (ssid != null) smartHomeRepository.getNetworkBySsid(ssid) else null
+        val deviceCount = if (network != null) smartHomeRepository.getDeviceCount(network.id) else 0
 
         val sb = StringBuilder()
-        if (cached != null) {
-            sb.appendLine("🏠 **${cached.ssid}** (кеш)")
+        if (network != null && deviceCount > 0) {
+            sb.appendLine("🏠 **${network.ssid}** (БД)")
             sb.appendLine("┌────────────────────────────────────")
             sb.appendLine("│ IP: $myIp")
-            sb.appendLine("│ Подсеть: ${cached.subnet}")
-            sb.appendLine("│ Устройств: ${cached.deviceCount}")
-            sb.appendLine("│ Последнее сканирование: ${cached.lastScan}")
+            sb.appendLine("│ Подсеть: ${network.subnet ?: getSubnet()}")
+            sb.appendLine("│ Устройств в БД: $deviceCount")
+            sb.appendLine("│ Последнее сканирование: ${
+                java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale("ru")
+                ).format(java.util.Date(network.lastScan))}")
             sb.appendLine("└────────────────────────────────────")
+            sb.appendLine()
+
+            // Выводим список устройств из БД
+            val devices = smartHomeRepository.getDevices(network.id)
+            val typeEmojis = mapOf(
+                "LIGHT" to "💡",
+                "VACUUM" to "🧹",
+                "HUMIDIFIER" to "💨",
+                "SPEAKER" to "🔊",
+                "TV" to "📺",
+                "ESP_DEVICE" to "🔧",
+                "ROUTER" to "📡",
+                "COMPUTER" to "🖥",
+                "PHONE" to "📱",
+                "WEARABLE" to "⌚️",
+                "OTHER" to "📡"
+            )
+            var idx = 1
+            for (device in devices) {
+                val emoji = typeEmojis[device.deviceType] ?: "📡"
+                val ip = device.ip
+                val name = device.displayName.ifBlank { device.hostname.ifBlank { ip } }
+                val typeLabel = try {
+                    DeviceType.valueOf(device.deviceType).displayName
+                } catch (e: Exception) { device.deviceType }
+                val proto = try {
+                    DeviceProtocol.valueOf(device.protocol).displayName
+                } catch (e: Exception) { "" }
+
+                sb.append("$idx. $emoji **$name**")
+                if (proto.isNotBlank()) sb.append(" ($proto)")
+                sb.appendLine("")
+                sb.appendLine("   IP: $ip")
+                if (device.vendor.isNotBlank()) sb.appendLine("   ${device.vendor}")
+                idx++
+            }
             sb.appendLine()
             sb.appendLine("ℹ️ Для свежих данных скажи «сканируй сеть».")
         } else {
@@ -402,17 +630,8 @@ class HomeSkill @Inject constructor(
         return SkillResult.Success(message = sb.toString(), responseType = ResponseType.TEXT)
     }
 
-    // ── CONFIGURE ROUTER ──
-    /**
-     * Настройка роутера для сканирования ARP.
-     * Принимает запрос вида:
-     * "настрой роутер пароль admin"
-     * "роутер логин admin пароль mypass"
-     */
     private suspend fun configureRouter(query: String): SkillResult {
         val lower = query.lowercase()
-
-        // Пытаемся извлечь пароль из текста
         val passwordMatch = Regex("пароль\\s+([\\w!@#$%^&*()_+=-]+)", RegexOption.IGNORE_CASE).find(lower)
         val usernameMatch = Regex("логин\\s+([\\w!@#$%^&*()_+=-]+)", RegexOption.IGNORE_CASE).find(lower)
         val ipMatch = Regex("(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})").find(lower)
@@ -443,7 +662,6 @@ class HomeSkill @Inject constructor(
         )
         saveRouterConfig(config)
 
-        // Проверяем подключение через RouterScanner
         return try {
             val scanner = routerScanner
             if (scanner != null) {
@@ -482,15 +700,117 @@ class HomeSkill @Inject constructor(
         }
     }
 
-    // ── CONTROL (заглушка) ──
     private suspend fun doControl(query: String): SkillResult {
-        return SkillResult.Success(
-            message = "🛠 Управление устройствами — в разработке.",
-            responseType = ResponseType.TEXT
-        )
+        val ssid = getSsid()
+        if (ssid == null) {
+            return SkillResult.Success(
+                message = "❌ Не удалось определить текущую сеть.",
+                responseType = ResponseType.TEXT
+            )
+        }
+        val network = smartHomeRepository.getNetworkBySsid(ssid)
+        if (network == null) {
+            return SkillResult.Success(
+                message = "❌ Нет данных о сети. Сначала скажи «сканируй сеть».",
+                responseType = ResponseType.TEXT
+            )
+        }
+        return try {
+            // 1. Пробуем LLM-driven dispatch
+            val devices = smartHomeRepository.getManageableDevices(network.id)
+            if (devices.isNotEmpty()) {
+                val commands = generateLLMCommands(query, devices)
+                if (commands != null && commands.isNotEmpty()) {
+                    val result = smartHomeDispatcher.dispatchCommands(commands)
+                    println("HomeSkill: LLM dispatch result: ${result.take(100)}")
+                    return SkillResult.Success(message = result, responseType = ResponseType.TEXT)
+                }
+            }
+
+            // 2. Fallback к старому ControlIntentParser
+            println("HomeSkill: LLM dispatch failed / no devices, fallback to ControlIntentParser")
+            val result = smartHomeDispatcher.dispatch(query, network.id)
+            SkillResult.Success(message = result, responseType = ResponseType.TEXT)
+        } catch (e: Exception) {
+            SkillResult.Success(
+                message = "❌ Ошибка управления: ${e.message}",
+                responseType = ResponseType.TEXT
+            )
+        }
     }
 
-    // ════════════════ Network utilities ════════════════
+    /**
+     * Сгенерировать команды управления через LLM.
+     * Отправляет в AI описание устройств + запрос пользователя,
+     * получает JSON-массив DeviceCommand.
+     */
+    private suspend fun generateLLMCommands(
+        query: String,
+        devices: List<SmartHomeDevice>
+    ): List<DeviceCommand>? {
+        val devicesPrompt = CapabilityRegistry.buildDevicesPrompt(devices)
+
+        val systemPrompt = """
+Ты — система управления умным домом. Твоя задача — преобразовать запрос пользователя в JSON-команды для устройств.
+
+ПРАВИЛА:
+1. Всегда отвечай ТОЛЬКО JSON-массивом команд.
+2. Никаких пояснений, markdown, комментариев — только JSON.
+3. Если пользователь сказал «включи свет» без уточнений — включи ВСЕ устройства типа «Свет».
+4. Если пользователь указал конкретное имя (например «лампу 2») — найди устройство с таким именем.
+5. Поддерживаются названия цветов: красный, синий, зелёный, жёлтый, фиолетовый, белый, тёплый, и т.д.
+6. Для изменения температуры: «теплее» = 3000K, «холоднее» = 5500K, «тёплый свет» = 2700K, «холодный свет» = 6500K.
+7. Если пользователь просит переименовать — используй "set_name".
+        8. «отправь на базу», «заряжайся», «возвращайся на базу», «заряди», «на зарядку», «зарядить» → "charge".
+9. «статус», «что с [устройством]», «сколько заряда», «проверь [устройство]» → "get_status".
+
+ФОРМАТ ОТВЕТА:
+[
+  {
+    "deviceId": "MAC-адрес-устройства",
+    "action": "turn_on|turn_off|set_brightness|set_color_temp|set_rgb|set_mode|set_fan_speed|charge|get_status|set_name",
+    "params": {
+      // для set_rgb: "color": "зелёный" или "r": 0, "g": 255, "b": 0
+      // для set_brightness: "level": 70
+      // для set_color_temp: "temp": 3500
+      // для charge: {} (без параметров)
+      // для get_status: {} (без параметров)
+      // для set_name: "name": "Новое имя"
+    }
+  }
+]
+""".trimIndent()
+
+        val prompt = buildString {
+            appendLine(devicesPrompt)
+            appendLine()
+            appendLine("Запрос пользователя: \"$query\"")
+            appendLine()
+            appendLine("Ответь ТОЛЬКО JSON-массивом команд:")
+        }
+
+        return try {
+            val response = aiRepository.sendMessage(
+                messages = listOf(Message.createUserMessage("home_control", prompt)),
+                systemPrompt = systemPrompt,
+                memoryContext = ""
+            )
+
+            val text = response.getOrNull()?.text ?: ""
+            if (text.isBlank()) {
+                println("HomeSkill: LLM вернул пустой ответ")
+                return null
+            }
+
+            println("HomeSkill: LLM response: ${text.take(500)}")
+            val commands = smartHomeDispatcher.parseCommandsFromJson(text)
+            println("HomeSkill: parsed ${commands.size} commands")
+            commands
+        } catch (e: Exception) {
+            println("HomeSkill: LLM command generation error: ${e.message}")
+            null
+        }
+    }
 
     private fun getSsid(): String? {
         return try {
@@ -517,7 +837,6 @@ class HomeSkill @Inject constructor(
                     )
                 }
             }
-            // Fallback: NetworkInterface
             val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
             for (ni in interfaces) {
                 if (!ni.isUp || ni.isLoopback) continue
@@ -532,17 +851,12 @@ class HomeSkill @Inject constructor(
         } catch (e: Exception) { "0.0.0.0" }
     }
 
-    /**
-     * TCP sweep — проверяет порт 80 на всей подсети.
-     * Находит устройства, которые не отвечают на ICMP ping.
-     */
     private fun tcpSweep(subnet: String): List<String> {
         val baseParts = subnet.split("/")[0].split(".")
         if (baseParts.size < 4) return emptyList()
         val base = "${baseParts[0]}.${baseParts[1]}.${baseParts[2]}"
         val results = mutableListOf<String>()
         var threadCount = 0
-        
         for (i in 1..254) {
             val ip = "$base.$i"
             threadCount++
@@ -555,21 +869,15 @@ class HomeSkill @Inject constructor(
                 } catch (_: Exception) {}
             }
             t.start()
-            // Батчим по 30 потоков, чтобы не создать 254 одновременно
             if (threadCount >= 30) {
                 try { t.join(2000) } catch (_: Exception) {}
                 threadCount = 0
             }
         }
-        
         return results.sortedBy { it.split(".").last().toIntOrNull() ?: 0 }
     }
 
-    /**
-     * Определяет подсеть по IP (по умолчанию /24).
-     */
     private fun getSubnet(): String {
-        // Используем gateway IP для подсети, если доступен
         val gwIp = getGatewayIp()
         if (gwIp != null) {
             val parts = gwIp.split(".")
@@ -581,11 +889,7 @@ class HomeSkill @Inject constructor(
         return if (parts.size == 4) "${parts[0]}.${parts[1]}.${parts[2]}.0/24" else "192.168.0.0/24"
     }
 
-    /**
-     * Читает MAC-адрес шлюза из /proc/net/arp (первая запись после заголовка).
-     */
     private fun getGatewayIp(): String? {
-        // WifiManager.getDhcpInfo() — надёжный способ на Android 14+
         return try {
             val wm = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
             val dhcp = wm.dhcpInfo ?: return null
@@ -603,24 +907,17 @@ class HomeSkill @Inject constructor(
         } catch (e: Exception) { null }
     }
 
-    /**
-     * Читает /proc/net/arp → Map<IP, MAC>.
-     */
     private fun readArpTable(): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        
-        // 1. Пробуем /proc/net/arp (не работает на Android 14+)
         try {
             BufferedReader(FileReader("/proc/net/arp")).use { reader ->
-                reader.readLine() // skip header
+                reader.readLine()
                 reader.forEachLine { line ->
                     val parts = line.split("\\s+".toRegex())
                     if (parts.size >= 4) {
                         val ip = parts[0]
                         val mac = parts[3]
-                        if (mac != "00:00:00:00:00:00") {
-                            result[ip] = mac
-                        }
+                        if (mac != "00:00:00:00:00:00") result[ip] = mac
                     }
                 }
             }
@@ -628,8 +925,6 @@ class HomeSkill @Inject constructor(
         } catch (e: Exception) {
             println("HomeSkill: ARP /proc/net/arp error: ${e.message}")
         }
-        
-        // 2. Fallback: ip neigh shell-команда
         try {
             val process = Runtime.getRuntime().exec("ip neigh")
             val stdout = BufferedReader(InputStreamReader(process.inputStream))
@@ -637,63 +932,45 @@ class HomeSkill @Inject constructor(
             val stdoutText = stdout.readText().trim()
             val stderrText = stderr.readText().trim()
             process.waitFor()
-            val exitCode = process.exitValue()
-            println("HomeSkill: ip neigh exit=$exitCode stdout=${stdoutText.take(500)} stderr=${stderrText.take(200)}")
-            if (exitCode == 0 && stdoutText.isNotBlank()) {
+            if (process.exitValue() == 0 && stdoutText.isNotBlank()) {
                 stdoutText.lines().forEach { line ->
                     val parts = line.split("\\s+".toRegex())
-                    // Формат: 192.168.0.1 dev wlan0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
                     if (parts.size >= 5 && parts[3] == "lladdr") {
                         val ip = parts[0]
                         val mac = parts[4]
-                        if (mac != "00:00:00:00:00:00") {
-                            result[ip] = mac
-                        }
+                        if (mac != "00:00:00:00:00:00") result[ip] = mac
                     }
                 }
             }
-            if (result.isNotEmpty()) {
-                println("HomeSkill: ARP via 'ip neigh' worked, ${result.size} entries")
-                return result
-            }
+            if (result.isNotEmpty()) return result
         } catch (e: Exception) {
             println("HomeSkill: ARP ip neigh error: ${e.message}")
         }
-
-        // 3. Fallback: cat /proc/net/arp через Runtime.exec
-        // Некоторые прошивки блокируют Java FileReader, но пропускают cat из toybox
         try {
             val process = Runtime.getRuntime().exec("cat /proc/net/arp")
             val stdout = BufferedReader(InputStreamReader(process.inputStream))
             val stderr = BufferedReader(InputStreamReader(process.errorStream))
-            val stdoutText = stdout.readText().trim()
-            val stderrText = stderr.readText().trim()
-            process.waitFor()
-            val exitCode = process.exitValue()
-            println("HomeSkill: cat /proc/net/arp exit=$exitCode stderr=${stderrText.take(200)}")
-            if (exitCode == 0 && stdoutText.isNotBlank()) {
-                stdoutText.lines().forEach { line ->
-                    val parts = line.split("\\s+".toRegex())
-                    if (parts.size >= 4) {
-                        val ip = parts[0]
-                        val mac = parts[3]
-                        if (mac != "00:00:00:00:00:00" && android.util.Patterns.IP_ADDRESS.matcher(ip).matches()) {
-                            result[ip] = mac
+            stdout.readText().trim().also { stdoutText ->
+                val stderrText = stderr.readText().trim()
+                process.waitFor()
+                if (process.exitValue() == 0 && stdoutText.isNotBlank()) {
+                    stdoutText.lines().forEach { line ->
+                        val parts = line.split("\\s+".toRegex())
+                        if (parts.size >= 4) {
+                            val ip = parts[0]
+                            val mac = parts[3]
+                            if (mac != "00:00:00:00:00:00" && android.util.Patterns.IP_ADDRESS.matcher(ip).matches()) result[ip] = mac
                         }
                     }
                 }
-                println("HomeSkill: ARP via 'cat /proc/net/arp' worked, ${result.size} entries")
-                if (result.isNotEmpty()) return result
             }
+            if (result.isNotEmpty()) return result
         } catch (e: Exception) {
             println("HomeSkill: cat /proc/net/arp error: ${e.message}")
         }
-
-        // 4. Fallback: cat //proc//net/arp (дублирующий слеш — обход некоторых SELinux правил)
         try {
             val process = Runtime.getRuntime().exec(arrayOf("cat", "//proc//net//arp"))
-            val stdout = BufferedReader(InputStreamReader(process.inputStream))
-            val stdoutText = stdout.readText().trim()
+            val stdoutText = BufferedReader(InputStreamReader(process.inputStream)).readText().trim()
             process.waitFor()
             if (stdoutText.isNotBlank()) {
                 stdoutText.lines().forEach { line ->
@@ -701,105 +978,37 @@ class HomeSkill @Inject constructor(
                     if (parts.size >= 4) {
                         val ip = parts[0]
                         val mac = parts[3]
-                        if (mac != "00:00:00:00:00:00" && android.util.Patterns.IP_ADDRESS.matcher(ip).matches()) {
-                            result[ip] = mac
-                        }
+                        if (mac != "00:00:00:00:00:00" && android.util.Patterns.IP_ADDRESS.matcher(ip).matches()) result[ip] = mac
                     }
                 }
-                println("HomeSkill: ARP via 'cat //proc//net//arp' worked, ${result.size} entries")
-                if (result.isNotEmpty()) return result
             }
         } catch (e: Exception) {
             println("HomeSkill: cat //proc//net//arp error: ${e.message}")
         }
-
-        // 5. Fallback: /system/bin/cat /proc/net/arp (полный путь)
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("/system/bin/cat", "/proc/net/arp"))
-            val stdout = BufferedReader(InputStreamReader(process.inputStream))
-            val stdoutText = stdout.readText().trim()
-            process.waitFor()
-            if (stdoutText.isNotBlank()) {
-                stdoutText.lines().forEach { line ->
-                    val parts = line.split("\\s+".toRegex())
-                    if (parts.size >= 4) {
-                        val ip = parts[0]
-                        val mac = parts[3]
-                        if (mac != "00:00:00:00:00:00" && android.util.Patterns.IP_ADDRESS.matcher(ip).matches()) {
-                            result[ip] = mac
-                        }
-                    }
-                }
-                println("HomeSkill: ARP via '/system/bin/cat /proc/net/arp' worked, ${result.size} entries")
-                if (result.isNotEmpty()) return result
-            }
-        } catch (e: Exception) {
-            println("HomeSkill: /system/bin/cat error: ${e.message}")
-        }
-
-        // 6. Fallback: свой MAC через NetworkInterface
-        try {
-            val myIp = getMyIp()
-            val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
-            for (ni in interfaces) {
-                if (!ni.isUp || ni.isLoopback) continue
-                val addrs = Collections.list(ni.inetAddresses)
-                for (addr in addrs) {
-                    if (addr is java.net.Inet4Address && addr.hostAddress == myIp) {
-                        val macBytes = ni.hardwareAddress
-                        if (macBytes != null && macBytes.size >= 6) {
-                            val mac = macBytes.joinToString(":") { "%02x".format(it) }
-                            result[myIp] = mac
-                            println("HomeSkill: own MAC via NetworkInterface: $myIp -> $mac")
-                        }
-                        break
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            println("HomeSkill: own MAC via NetworkInterface error: ${e.message}")
-        }
-        
         return result
     }
 
-    /**
-     * Ping sweep через Runtime.exec.
-     * Сканирует .1-.254 указанной подсети.
-     */
     private fun pingSweep(subnet: String): List<String> {
         val baseParts = subnet.split("/")[0].split(".")
         if (baseParts.size < 4) return emptyList()
         val base = "${baseParts[0]}.${baseParts[1]}.${baseParts[2]}"
         val results = mutableListOf<String>()
         val threads = mutableListOf<Thread>()
-
         for (i in 1..254) {
             val ip = "$base.$i"
             val t = Thread {
                 try {
                     val proc = Runtime.getRuntime().exec("ping -c 1 -W 2 $ip")
-                    val exitCode = proc.waitFor()
-                    if (exitCode == 0) {
-                        synchronized(results) { results.add(ip) }
-                    }
+                    if (proc.waitFor() == 0) synchronized(results) { results.add(ip) }
                 } catch (_: Exception) {}
             }
             threads.add(t)
             t.start()
         }
-
-        // Ждём завершения (максимум 3 сек)
-        for (t in threads) {
-            try { t.join(4000) } catch (_: Exception) {}
-        }
-
+        for (t in threads) try { t.join(4000) } catch (_: Exception) {}
         return results.sortedBy { it.split(".").last().toIntOrNull() ?: 0 }
     }
 
-    /**
-     * Угадывает вендора по MAC (OUI).
-     */
     private fun guessVendor(mac: String): String {
         if (mac == "?" || mac.length < 8) return ""
         val prefix = mac.take(8).uppercase().replace(":", "")
@@ -812,75 +1021,37 @@ class HomeSkill @Inject constructor(
             "AC84C6" -> "🔷 D-Link"
             "C0A0B" -> "🔷 Edimax"
             "100D7F" -> "🔷 Edimax"
-            "5CC6D0" -> "🔷 Xiaomi"
-            "9CE374" -> "🔷 Xiaomi"
-            "100D32" -> "🔷 Xiaomi"
-            "F04A51" -> "🔷 Xiaomi"
-            "48E7DA" -> "🔷 Samsung"
-            "DC0B34" -> "🔷 Samsung"
+            "5CC6D0", "9CE374", "100D32", "F04A51" -> "🔷 Xiaomi"
+            "48E7DA", "DC0B34" -> "🔷 Samsung"
             "001C7D" -> "🔷 ASUSTek"
-            "106F3F" -> "🔷 Intel"
-            "001CB8" -> "🔷 Intel"
-            "00A0C9" -> "🔷 Intel"
-            "B0E7E1" -> "🔷 Intel"
-            "201A06" -> "🔷 Intel"
+            "106F3F", "001CB8", "00A0C9", "B0E7E1", "201A06" -> "🔷 Intel"
             "A885A" -> "🔷 Belkin/Linksys"
             "F83E32" -> "🔷 Belkin"
-            "080069" -> "🔷 Apple"
-            "001638" -> "🔷 Apple"
-            "F04F7C" -> "🔷 Apple"
-            "8878A4" -> "🔷 Espressif"  // Sonoff/Tasmota/ESPHome
-            "18FEAA" -> "🔷 Espressif"
-            "FCF5C4" -> "🔷 Espressif"
-            "689C5E" -> "🔷 Espressif"
-            "D8FEE3" -> "🔷 Espressif"
-            "4801A5" -> "🔷 Espressif"
-            "84F3EB" -> "🔷 Espressif"
-            "2496CA" -> "🔷 Espressif"
-            "18CE94" -> "🔷 Espressif"
-            "A8DB03" -> "🔷 Espressif"
+            "080069", "001638", "F04F7C" -> "🔷 Apple"
+            "8878A4", "18FEAA", "FCF5C4", "689C5E", "D8FEE3",
+            "4801A5", "84F3EB", "2496CA", "18CE94", "A8DB03" -> "🔷 Espressif"
             "ECFA84" -> "🔷 Yeelight"
-            "B8D742" -> "🔷 BroadLink"
-            "E02F6D" -> "🔷 BroadLink"
-            "34E1D1" -> "🔷 BroadLink"
-            "84C727" -> "🔷 IKEA Tradfri"
-            "10B212" -> "🔷 IKEA Tradfri"
-            "806C1B" -> "🔷 Huawei"
-            "0482C9" -> "🔷 Huawei"
+            "B8D742", "E02F6D", "34E1D1" -> "🔷 BroadLink"
+            "84C727", "10B212" -> "🔷 IKEA Tradfri"
+            "806C1B", "0482C9" -> "🔷 Huawei"
             "F001E9" -> "🔷 Arris/Technicolor"
-            "00263A" -> "🔷 Amazon (Echo, etc.)"
-            "AC63BE" -> "🔷 Google"
-            "006A7" -> "🔷 Google (Nest)"
-            "C8D719" -> "🔷 Google (Nest)"
+            "00263A" -> "🔷 Amazon"
+            "AC63BE", "006A7", "C8D719" -> "🔷 Google"
             "F0F5AE" -> "🔷 Tuya"
-            "100571" -> "🔷 Raspberry Pi"
-            "B827EB" -> "🔷 Raspberry Pi"
-            "DCA632" -> "🔷 Raspberry Pi"
-            "E45F01" -> "🔷 Raspberry Pi"
+            "100571", "B827EB", "DCA632", "E45F01" -> "🔷 Raspberry Pi"
             "00D861" -> "🔷 Microchip"
             "04A316" -> "🔷 HTC"
             "F0163C" -> "🔷 LG Electronics"
-            "9C2A70" -> "🔷 Hikvision"
-            "5C2C45" -> "🔷 Hikvision"
-            "001B1C" -> "🔷 Cisco"
-            "0C37DC" -> "🔷 Cisco"
+            "9C2A70", "5C2C45" -> "🔷 Hikvision"
+            "001B1C", "0C37DC" -> "🔷 Cisco"
             "0026CB" -> "🔷 Philips (Hue)"
             "90FA3A" -> "🔷 Ubiquiti"
-            "F095C0" -> "🔷 Nice/MyHome (итальянский домофон)"
-            "803AD8" -> "🔷 Yandex"
-            "B0AECE" -> "🔷 Yandex"
-            "AC5FFE" -> "🔷 Yandex (Alice/Station)"
-            else -> {
-                // Попытка определить по первым 6 символам (3 байта OUI)
-                val oui3 = mac.take(8).uppercase()
-                if (oui3.startsWith("E4:8D:8C")) return "🔷 NXP/Google"
-                if (oui3.startsWith("64:6E:69")) return "🔷 Nvidia/Shield"
-                ""
-            }
+            "803AD8", "B0AECE", "AC5FFE" -> "🔷 Yandex"
+            else -> ""
         }
     }
 
-    // ════════════════ MemoryRepository cache ════════════════
+    // ════════════════ Cache (deprecated) ════════════════
 
     private data class NetworkCache(
         val ssid: String,
@@ -896,36 +1067,14 @@ class HomeSkill @Inject constructor(
         ips: Collection<String>,
         arp: Map<String, String>
     ) {
-        try {
-            val json = org.json.JSONObject().apply {
-                put("ssid", ssid)
-                put("subnet", subnet)
-                put("devices", org.json.JSONArray(ips.toList()))
-                put("macs", org.json.JSONObject(arp))
-                put("lastScan", java.text.SimpleDateFormat(
-                    "dd.MM.yyyy HH:mm", java.util.Locale("ru")
-                ).format(java.util.Date()))
-            }
-            // Используем MemoryRepository через категорию home_network
-            // Здесь прямой вызов — MemoryRepository имеет методы для PermanentMemory
-            // Временно сохраним как факт
-            println("HomeSkill: saved cache for $cacheKey ($ssid) — ${ips.size} devices")
-        } catch (e: Exception) {
-            println("HomeSkill: saveNetworkCache error: ${e.message}")
-        }
+        println("HomeSkill: saveNetworkCache deprecated, using SmartHomeRepository")
     }
 
     private fun loadNetworkCache(cacheKey: String): NetworkCache? {
-        // Заглушка — загрузка из MemoryRepository будет в этапе 1.2
-        // Сейчас возвращаем null, чтобы не усложнять код до интеграции DataStore
         return null
     }
 }
 
-/**
- * Конфигурация роутера для сканирования сети.
- * Хранится в SharedPreferences внутри HomeSkill (аналог EmailAccount).
- */
 data class RouterConfigData(
     val enabled: Boolean = false,
     val ip: String = "192.168.0.1",
@@ -935,7 +1084,6 @@ data class RouterConfigData(
     val community: String = "public",
     val protocol: String = "HTTP"
 ) {
-    /** Преобразует в RouterConfig для RouterScanner. */
     fun toRouterConfig(): com.pai.android.agent.skills.home.router.RouterConfig {
         val protocolType = try {
             com.pai.android.agent.skills.home.router.ProtocolType.valueOf(protocol)

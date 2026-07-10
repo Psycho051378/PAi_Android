@@ -132,11 +132,23 @@ class DecisionEngine @Inject constructor(
             ) to mapOf("command" to "get_file_info", "attribute" to "all"),
 
             // Сканирование сети / Network scan
-            listOf(
+listOf(
                 "сканируй сеть", "просканируй сеть", "найди устройства в сети",
                 "что в сети", "какие устройства в сети", "найди устройства",
                 "scan network", "network scan", "scan wifi", "list network devices"
-            ) to mapOf("command" to "home_scan"),
+) to mapOf("command" to "home_scan"),
+
+// Управление устройствами / Device control
+        listOf(
+            "включи","выключи","включить","выключить",
+            "turn on","turn off","switch on","switch off",
+            "яркость","brightness","цвет","color",
+            "lamp","ламп","свет","light",
+            "пылесос","vacuum","увлажнитель","humidifier",
+            "roborock","статус","зарядк","заряд",
+            "на базу","уборк","режим","вентилятор",
+            "тепл","холодн"
+        ) to mapOf("command" to "home_control"),
 
 
 
@@ -259,7 +271,9 @@ class DecisionEngine @Inject constructor(
                         println("📱 AppLaunchSkill: передаю запрос '$query'")
                         skillRegistry.getSkill("app_launch")
                     }
+                    "home" -> null // handled below (via HomeSkill.execute)
                     "home_scan" -> null // handled below
+                    "home_control" -> null // handled below
                     else -> skillRegistry.findSkill(Intent.FILE_OPERATION, query, mutableParams)
                 }
                 mutableParams["query"] = query
@@ -288,6 +302,26 @@ class DecisionEngine @Inject constructor(
                         )
                     }
                 }
+    if (command == "home" || command == "home_control") {
+        println("🔥 $command: calling HomeSkill.execute()")
+        val result = homeSkill.execute(mutableParams)
+        if (result is SkillResult.Success) {
+            return AgentResponse.Success(
+                answer = result.message,
+                thoughts = emptyList(),
+                actions = emptyList()
+            )
+        }
+        if (result is SkillResult.Error) {
+            return AgentResponse.Error(error = result.message)
+        }
+        return null
+    }
+
+    
+
+    
+
                 if (skill != null) {
                     val result = skill.execute(mutableParams)
                     return when (result) {
@@ -1002,7 +1036,9 @@ class DecisionEngine @Inject constructor(
         "word" to "office",
         "excel" to "office",
         "geo" to "geo",
-        "maps" to "tool_maps"
+        "maps" to "tool_maps",
+        "home" to "home",
+        "device_sensors" to "tool_device_sensors"
     )
 
     private val reactToolDescriptions: String by lazy {
@@ -1031,6 +1067,7 @@ class DecisionEngine @Inject constructor(
 "- location: FRESH GPS coordinates. MANDATORY: use action=current to get live GPS fix. action=last_known for cached, action=status for GPS on/off only. Home address from memory (New York) is NOT current location - use action=current for real position.\n" +
 "- get_context: get full device context (time, location, battery, tasks). action=full or action=quick\n" +
 "- clipboard: read/write device clipboard content. Use action=read when user asks about clipboard/buffer. Provides actual text in clipboard.\n" +
+"- device_sensors: read phone hardware sensors (battery temperature, ambient temperature, light level, pressure, proximity, humidity). Use action=all for all sensors, or action=battery_temp / ambient_temp / light / pressure / proximity / humidity for specific one.\n" +
 "- calendar: read Android calendar events. Use action=list_upcoming to get upcoming events, action=search to search by text, action=create to add new event."
     }
 
@@ -1113,8 +1150,8 @@ class DecisionEngine @Inject constructor(
             .toSet()
         
         val officeAliases = setOf("office", "pptx", "powerpoint", "word", "excel")
-        val gatherTools = setOf("web_search", "web_fetch", "read_file", "write_file", "append_file", "delete_file", "create_folder", "weather", "list_files", "email_check", "email_list", "email_read", "email_send", "contacts_search", "contacts_add", "call_dial", "call_call", "sms_send", "task_scheduler", "notif_listener", "location", "get_context", "home", "clipboard", "calendar", "geo", "maps") + officeAliases + extSkillNames
-        val executeTools = setOf("write_file", "append_file", "delete_file", "create_folder", "list_files", "execute_python", "email_send", "email_check", "email_list", "email_read", "contacts_search", "contacts_add", "call_dial", "call_call", "sms_send", "task_scheduler", "notif_listener", "location", "get_context", "home", "clipboard", "calendar", "geo", "maps") + officeAliases + extSkillNames
+        val gatherTools = setOf("web_search", "web_fetch", "read_file", "write_file", "append_file", "delete_file", "create_folder", "weather", "list_files", "email_check", "email_list", "email_read", "email_send", "contacts_search", "contacts_add", "call_dial", "call_call", "sms_send", "task_scheduler", "notif_listener", "location", "get_context", "device_sensors", "home", "clipboard", "calendar", "geo", "maps") + officeAliases + extSkillNames
+        val executeTools = setOf("write_file", "append_file", "delete_file", "create_folder", "list_files", "execute_python", "email_send", "email_check", "email_list", "email_read", "contacts_search", "contacts_add", "call_dial", "call_call", "sms_send", "task_scheduler", "notif_listener", "location", "get_context", "device_sensors", "home", "clipboard", "calendar", "geo", "maps") + officeAliases + extSkillNames
 
         // Add list of configured email accounts to context
         val emailAccountList = try {
@@ -1532,6 +1569,33 @@ class DecisionEngine @Inject constructor(
                 } else null
                 
                 val isGeo = toolName == "geo"
+
+                // 🔥 Используем динамическую схему из skill.getToolSchema(), если есть
+                val toolSchema = skill.getToolSchema()
+                if (toolSchema != null && !isGeo) {
+                    // Схема от навыка — парсим JSON как parameters
+                    val parsedSchema = try {
+                        val gson = Gson()
+                        val type = object : TypeToken<Map<String, Any>>() {}.type
+                        gson.fromJson<Map<String, Any>>(toolSchema, type)
+                    } catch (e: Exception) {
+                        println("⚠️ buildNativeToolDefs: ошибка парсинга getToolSchema для '$toolName': ${e.message}")
+                        null
+                    }
+                    if (parsedSchema != null) {
+                        defs.add(NativeToolDefinition(
+                            function = NativeFunctionDefinition(
+                                name = toolName,
+                                description = parsedSchema["description"] as? String ?: skill.description,
+                                parameters = parsedSchema
+                            )
+                        ))
+                        foundNames.add(toolName)
+                        println("🔧 buildNativeToolDefs: added '$toolName' with dynamic schema from skill")
+                        continue
+                    }
+                }
+
                 val description = when (toolName) {
                     "read_file" -> "Read a file. Params: path=filename"
                     "write_file" -> "Write content to a file. Params: path=filename, content=text"
@@ -1545,7 +1609,6 @@ class DecisionEngine @Inject constructor(
                     "email_read" -> "Read full email content. Params: uid=UID_NUMBER"
                     "email_send" -> "Send an email. Params: to=recipient, subject=title, body=message. Optional: file_path=path/to/file (attach one file), attachment_paths=path1,path2 (multiple)"
                     "contacts_search" -> "Search contacts. Params: query=name or phone"
-                    "home" -> "Scan home Wi-Fi network and list connected devices, identify smart devices. Params: query=user request. For 'сканируй сеть', the tool will ARP-scan + ping the whole /24 subnet."
                     "contacts_add" -> "Add contact. Params: name=..., phone=..."
                     "call_call" -> "Make a phone call. Use this FIRST. Calls the number directly via CALL_PHONE permission (no notification). If permission missing, uses notification fallback automatically. Params: number=phone"
                     "sms_send" -> "Send SMS. Params: number=phone, text=message"

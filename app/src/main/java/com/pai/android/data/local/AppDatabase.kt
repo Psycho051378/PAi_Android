@@ -16,6 +16,9 @@ import com.pai.android.data.model.Role
 import com.pai.android.data.model.Summary
 import com.pai.android.data.model.WebSearchSettings
 import com.pai.android.data.model.GeoTask
+import com.pai.android.data.model.ManufacturerAuth
+import com.pai.android.data.model.SmartHomeDevice
+import com.pai.android.data.model.SmartHomeNetwork
 
 /**
  * Основная база данных приложения.
@@ -32,9 +35,12 @@ import com.pai.android.data.model.GeoTask
         PermanentMemory::class,
         Summary::class,
         QueryAnalysisResult::class,
-        GeoTask::class
+        GeoTask::class,
+        SmartHomeNetwork::class,
+        SmartHomeDevice::class,
+        ManufacturerAuth::class
     ],
-    version = 22,
+    version = 25,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -57,6 +63,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun summaryDao(): SummaryDao
 
     abstract fun geoTaskDao(): GeoTaskDao
+
+    abstract fun smartHomeDao(): SmartHomeDao
+
+    abstract fun manufacturerAuthDao(): ManufacturerAuthDao
 
     companion object {
         const val DATABASE_NAME = "pai_database"
@@ -477,5 +487,30 @@ internal val MIGRATION_21_22 = object : Migration(21, 22) {
         println("🔨 MIGRATION_21_22: Добавляем поле auto_unload_seconds в provider_settings")
         database.execSQL("ALTER TABLE provider_settings ADD COLUMN auto_unload_seconds INTEGER NOT NULL DEFAULT 0")
         println("✅ MIGRATION_21_22: Поле auto_unload_seconds добавлено (0 = никогда)")
+    }
+}
+
+// Миграция 22 → 23 — удалена, т.к. вызывала расхождение identity hash в Room.
+// База пересоздаётся через fallbackToDestructiveMigration при переходе 22→24.
+// Новая база создаётся Room'ом напрямую из @Entity аннотаций.
+
+// Миграция 24 → 25: добавляем таблицу manufacturer_auth + поле deviceConfig в smart_home_devices
+internal val MIGRATION_24_25 = object : Migration(24, 25) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        println("🔄 MIGRATION_24_25: Добавляем таблицу manufacturer_auth")
+        database.execSQL("""
+            CREATE TABLE manufacturer_auth (
+                manufacturer TEXT PRIMARY KEY NOT NULL,
+                displayName TEXT NOT NULL DEFAULT '',
+                authType TEXT NOT NULL DEFAULT 'login_password',
+                credentials TEXT NOT NULL DEFAULT '{}',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                lastSynced INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        println("✅ MIGRATION_24_25: Таблица manufacturer_auth создана")
+        println("🔄 MIGRATION_24_25: Добавляем поле deviceConfig в smart_home_devices")
+        database.execSQL("ALTER TABLE smart_home_devices ADD COLUMN deviceConfig TEXT NOT NULL DEFAULT '{}'")
+        println("✅ MIGRATION_24_25: Поле deviceConfig добавлено")
     }
 }
