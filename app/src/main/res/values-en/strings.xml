@@ -442,6 +442,33 @@
 
     <!-- RouterSettingsScreen -->
     <string name="router_settings_title">Network Settings</string>
+    <string name="manufacturer_auth_title">Manufacturer Authorization</string>
+    <string name="manufacturer_auth_description">Xiaomi Mi Cloud, Yandex and others</string>
+    <string name="manufacturer_auth_configure">Configure</string>
+    <string name="manufacturer_auth_screen_title">Manufacturer Authorization</string>
+    <string name="manufacturer_auth_how_it_works">Some devices require a local token obtained through the manufacturer\'s cloud API. For Xiaomi, enter your Mi account credentials. Tokens will be automatically fetched and saved locally for controlling your vacuum, humidifier and other Mi Home devices.</string>
+    <string name="manufacturer_auth_mi_home">Mi Home (Xiaomi)</string>
+    <string name="manufacturer_auth_login_label">Login (email)</string>
+    <string name="manufacturer_auth_password_label">Password</string>
+    <string name="manufacturer_auth_save">Save</string>
+    <string name="manufacturer_auth_delete">Delete</string>
+    <string name="manufacturer_auth_sync">Get tokens from Mi Cloud</string>
+    <string name="manufacturer_auth_syncing">Syncing...</string>
+    <string name="manufacturer_auth_saved">✅ Xiaomi credentials saved</string>
+    <string name="manufacturer_auth_deleted">✅ Xiaomi credentials deleted</string>
+    <string name="manufacturer_auth_no_credentials">❌ Enter your Xiaomi login and password first</string>
+    <string name="manufacturer_auth_sync_complete">✅ Sync complete. Found %d tokens, saved for %d of our devices.</string>
+    <string name="manufacturer_auth_devices_with_tokens">Devices with tokens</string>
+    <string name="manufacturer_auth_token_status">✅ — token obtained, device ready to control
+⏳ — no token yet, device just discovered</string>
+    <string name="manufacturer_auth_no_token_for_ip">No token found for %s. Authorize Xiaomi in settings.</string>
+    <string name="manufacturer_auth_yandex_placeholder">Yandex.Station support will be added later.</string>
+    <string name="manufacturer_auth_token_instruction">Xiaomi devices (vacuum, humidifier) require a device token to be controlled locally. Enter the token manually (32 hex chars), obtained via third-party tools (e.g., Mi Home app backup dump).</string>
+    <string name="manufacturer_auth_token_saved">✅ Token saved</string>
+    <string name="manufacturer_auth_clear">Clear</string>
+    <string name="manufacturer_auth_no_devices">No Xiaomi devices found. Scan your home network first.</string>
+    <string name="manufacturer_auth_enter_tokens">Enter tokens to control your devices</string>
+    <string name="manufacturer_auth_refresh">Refresh list</string>
 
     <!-- Missing ProviderSettings labels -->
     <string name="provider_default_model_label">Default model</string>

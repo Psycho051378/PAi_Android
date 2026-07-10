@@ -33,7 +33,8 @@ data class TestResult(
 @Singleton
 class RouterScanner @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
+    private val pythonScanner: RouterScannerPython? = null
 ) {
 
     companion object {
@@ -89,14 +90,35 @@ class RouterScanner @Inject constructor(
                 if (connected) {
                     println("RouterScanner: connected via ${protocol.name}")
                     val arp = client.getArpTable()
-                    println("RouterScanner: got ${arp.size} entries via ${protocol.name}")
-                    return arp
+                    if (arp.isNotEmpty()) {
+                        println("RouterScanner: got ${arp.size} entries via ${protocol.name}")
+                        return arp
+                    }
+                    println("RouterScanner: ${protocol.name} returned empty, trying next protocol")
                 } else {
                     println("RouterScanner: ${protocol.name} connection failed")
                 }
             } catch (e: Exception) {
                 println("RouterScanner: ${protocol.name} error: ${e.message}")
             }
+        }
+
+        // 3. Fallback: Python через Chaquopy (tplinkrouterc6u)
+        try {
+            val py = pythonScanner
+            if (py != null) {
+                println("RouterScanner: trying Python fallback...")
+                val arp = py.scan(config)
+                if (arp.isNotEmpty()) {
+                    println("RouterScanner: got ${arp.size} entries via Python")
+                    return arp
+                }
+                println("RouterScanner: Python returned empty ARP")
+            } else {
+                println("RouterScanner: Python scanner not available")
+            }
+        } catch (e: Exception) {
+            println("RouterScanner: Python fallback error: ${e.message}")
         }
 
         println("RouterScanner: all protocols failed")

@@ -21,6 +21,7 @@ import com.pai.android.ui.screens.ProviderSettingsScreen
 import com.pai.android.ui.screens.RoleListScreen
 import com.pai.android.ui.screens.SettingsScreen
 import com.pai.android.ui.screens.VoiceSettingsScreen
+import com.pai.android.ui.screens.ManufacturerSettingsScreen
 import com.pai.android.ui.screens.RouterSettingsScreen
 import com.pai.android.ui.screens.WebSearchSettingsScreen
 import com.pai.android.ui.screens.ProactiveSettingsScreen
@@ -90,6 +91,7 @@ sealed class Screen(val route: String) {
     object VoiceSettings : Screen("voice_settings")
     object RouterSettings : Screen("router_settings")
     object SmartRouterSettings : Screen("smart_router_settings")
+    object ManufacturerSettings : Screen("manufacturer_settings")
     object Permissions : Screen("permissions")
     object PermissionsSettings : Screen("permissions_settings")
 
@@ -271,6 +273,16 @@ fun PaiNavigation(
             popExitTransition = { NavigationAnimations.slideOutHorizontalReverseAnim }
         ) {
             SmartRouterSettingsScreen(navController = navController)
+        }
+
+        composable(
+            route = Screen.ManufacturerSettings.route,
+            enterTransition = { NavigationAnimations.slideInHorizontalAnim },
+            exitTransition = { NavigationAnimations.slideOutHorizontalAnim },
+            popEnterTransition = { NavigationAnimations.slideInHorizontalReverseAnim },
+            popExitTransition = { NavigationAnimations.slideOutHorizontalReverseAnim }
+        ) {
+            ManufacturerSettingsScreen(navController = navController)
         }
 
         composable(

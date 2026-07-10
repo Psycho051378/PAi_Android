@@ -24,6 +24,14 @@ interface Skill {
     fun canHandle(intent: Intent, query: String, params: Map<String, Any>): Boolean
     
     /**
+     * JSON-схема инструмента для LLM (Native Tool Definition).
+     * Если не null — LLM в ReAct увидит этот навык как вызываемый инструмент
+     * с описанными параметрами, а не будет вызывать вслепую.
+     * Если null — навык не показывается как инструмент (используется только через canHandle).
+     */
+    fun getToolSchema(): String? = null
+
+    /**
      * Выполняет действие навыка.
      * @param params параметры для выполнения
      * @return результат выполнения
