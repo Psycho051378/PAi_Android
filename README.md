@@ -88,7 +88,7 @@ You can download the latest debug APK directly:
 
 | File | Size | Android | Build |
 |------|------|---------|-------|
-| [`PAi_Android_v0.7.0.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v0.7.0/PAi_Android_v0.7.0.apk) | ~179 MB | 7.0+ (API 24) | Debug |
+| [`PAi_Android_v0.7.1.apk`](https://github.com/Psycho051378/PAi_Android/releases/download/v0.7.1/PAi_Android_v0.7.1.apk) | ~179 MB | 7.0+ (API 24) | Debug |
 
 > ⚠️ This is a **debug build** — requires `Install from unknown apps` permission.
 > For a release build, clone the repo and run `./gradlew assembleRelease`.
