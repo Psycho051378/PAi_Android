@@ -56,6 +56,6 @@ tmp_log.txt
 apk/
 
 # Local plans / drafts
+docs/
 PLAN_LOCAL_MODELS.md
-docs/smart-router-plan.md
 
