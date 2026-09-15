@@ -194,6 +194,7 @@ object DeviceTypeDetector {
         return when {
             openPorts.contains(38899) -> DeviceProtocol.WIZ
             openPorts.contains(55443) -> DeviceProtocol.YEELIGHT
+            openPorts.any { it in listOf(9999, 20002) } -> DeviceProtocol.TPLINK_KASA
             openPorts.any { it in listOf(1883, 8883) } -> DeviceProtocol.MQTT
             else -> DeviceProtocol.UNKNOWN
         }
@@ -207,8 +208,11 @@ object DeviceTypeDetector {
             DeviceType.LIGHT -> when (protocol) {
                 DeviceProtocol.WIZ -> listOf("on_off", "brightness", "color_temp", "rgb")
                 DeviceProtocol.YEELIGHT -> listOf("on_off", "brightness", "color_temp", "rgb")
-                DeviceProtocol.TASMOTA -> listOf("on_off", "brightness")
+                DeviceProtocol.SHELLY -> listOf("on_off", "brightness", "color_temp", "rgb")
+                DeviceProtocol.TASMOTA -> listOf("on_off", "brightness", "color_temp", "rgb")
                 DeviceProtocol.ESPHOME -> listOf("on_off", "brightness")
+                DeviceProtocol.WLED -> listOf("on_off", "brightness", "rgb")
+                DeviceProtocol.TPLINK_KASA -> listOf("on_off", "brightness", "color_temp", "rgb")
                 else -> listOf("on_off")
             }
             DeviceType.VACUUM -> listOf("start", "stop", "pause", "dock")
@@ -252,7 +256,7 @@ object DeviceTypeDetector {
         return when (fingerprint) {
             "sonoff_tasmota" -> DeviceTypeInfo.ESP_DEVICE("tasmota")
             "tasmota" -> DeviceTypeInfo.ESP_DEVICE("tasmota")
-            "shelly" -> DeviceTypeInfo.OTHER("tasmota")
+            "shelly" -> DeviceTypeInfo.LIGHT("shelly", 80)
             "esphome" -> DeviceTypeInfo.ESP_DEVICE("esphome")
             "home_assistant" -> DeviceTypeInfo.OTHER("unknown")
             "yeelight" -> DeviceTypeInfo.LIGHT("yeelight", 80)
