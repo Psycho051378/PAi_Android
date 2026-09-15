@@ -38,7 +38,11 @@ enum class DeviceProtocol(val displayName: String) {
     ESPHOME("ESPHome"),
     MIIO("Xiaomi MiIO"),
     ROBOROCK("Roborock"),
+    SHELLY("Shelly"),
+    GENERIC_HTTP("Generic HTTP"),
+    WLED("WLED"),
     MQTT("MQTT"),
+    TPLINK_KASA("TP-Link Kasa/Tapo"),
     YANDEX("Yandex"),
     UNKNOWN("Неизвестно");
 

@@ -203,13 +203,40 @@ object CapabilityRegistry {
                 Capability(CapabilityType.BATTERY, "Уровень заряда батареи 0-100%"),
                 Capability(CapabilityType.FAN_SPEED, "Скорость вентилятора", mapOf("levels" to listOf("quiet", "balanced", "turbo", "max")))
             )
+            DeviceProtocol.SHELLY -> listOf(
+                Capability(CapabilityType.POWER, "Включить/выключить (реле Shelly)"),
+                Capability(CapabilityType.BRIGHTNESS, "Яркость 1-100", mapOf("min" to 1, "max" to 100)),
+                Capability(CapabilityType.RGB, "Цвет Shelly (RGBW2 / Bulb)"),
+                Capability(CapabilityType.COLOR_TEMP, "Цветовая температура 2700-6500K", mapOf("min" to 2700, "max" to 6500)),
+                Capability(CapabilityType.STATUS, "Статус устройства")
+            )
             DeviceProtocol.TASMOTA -> listOf(
                 Capability(CapabilityType.POWER, "Включить/выключить (реле Tasmota)"),
+                Capability(CapabilityType.BRIGHTNESS, "Яркость 0-100", mapOf("min" to 0, "max" to 100)),
+                Capability(CapabilityType.RGB, "Цвет Tasmota (HEX)"),
+                Capability(CapabilityType.COLOR_TEMP, "Цветовая температура 2000-6500K", mapOf("min" to 2000, "max" to 6500)),
                 Capability(CapabilityType.STATUS, "Статус и показания датчика")
             )
             DeviceProtocol.ESPHOME -> listOf(
                 Capability(CapabilityType.POWER, "Включить/выключить"),
                 Capability(CapabilityType.STATUS, "Статус и показания датчика")
+            )
+            DeviceProtocol.WLED -> listOf(
+                Capability(CapabilityType.POWER, "Включить/выключить (WLED)"),
+                Capability(CapabilityType.BRIGHTNESS, "Яркость 0-255", mapOf("min" to 0, "max" to 255)),
+                Capability(CapabilityType.RGB, "Цвет WLED (RGB)"),
+                Capability(CapabilityType.STATUS, "Статус WLED (эффект, яркость)")
+            )
+            DeviceProtocol.GENERIC_HTTP -> listOf(
+                Capability(CapabilityType.POWER, "Включить/выключить (HTTP)"),
+                Capability(CapabilityType.STATUS, "Статус")
+            )
+            DeviceProtocol.TPLINK_KASA -> listOf(
+                Capability(CapabilityType.POWER, "Включить/выключить"),
+                Capability(CapabilityType.BRIGHTNESS, "Яркость 0-100", mapOf("min" to 0, "max" to 100)),
+                Capability(CapabilityType.RGB, "Цвет (HSV)"),
+                Capability(CapabilityType.COLOR_TEMP, "Цветовая температура 2500-6500K", mapOf("min" to 2500, "max" to 6500)),
+                Capability(CapabilityType.STATUS, "Статус устройства")
             )
             DeviceProtocol.YANDEX -> listOf(
                 Capability(CapabilityType.POWER, "Включить/выключить через Yandex"),

@@ -478,6 +478,14 @@
     <string name="manufacturer_auth_token_status">✅ — токен получен, устройством можно управлять
 ⏳ — токен не получен, устройство только обнаружено</string>
     <string name="manufacturer_auth_no_token_for_ip">Токен не найден для %s. Авторизуй Xiaomi в настройках.</string>
+    <string name="manufacturer_auth_tplink_title">TP-Link Kasa / Tapo</string>
+    <string name="manufacturer_auth_tplink_description">Логин и пароль от TP-Link аккаунта (нужен для Tapo-устройств). Для старых Kasa устройств не требуется.</string>
+    <string name="manufacturer_auth_tplink_email_label">Email</string>
+    <string name="manufacturer_auth_tplink_password_label">Пароль</string>
+    <string name="manufacturer_auth_tplink_show">Показать</string>
+    <string name="manufacturer_auth_tplink_hide">Скрыть</string>
+    <string name="manufacturer_auth_tplink_clear">Очистить</string>
+    <string name="manufacturer_auth_tplink_save">Сохранить</string>
     <string name="manufacturer_auth_yandex_placeholder">Поддержка Яндекс.Станции будет добавлена позже.</string>
     <string name="manufacturer_auth_token_instruction">Для управления устройствами Xiaomi (пылесос, увлажнитель) необходим device token. Введи токен вручную (32 hex-символа), полученный через сторонние утилиты (например, дамп Mi Home приложения).</string>
     <string name="manufacturer_auth_token_saved">✅ Токен сохранён</string>
