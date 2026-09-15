@@ -136,6 +136,92 @@ fun ManufacturerSettingsScreen(
                 }
             }
 
+            // TP-Link Kasa/Tapo
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("💡", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.manufacturer_auth_tplink_title),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.manufacturer_auth_tplink_description),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                    )
+
+                    // Username
+                    OutlinedTextField(
+                        value = state.tpLink.username,
+                        onValueChange = { viewModel.updateTpLinkUsername(it) },
+                        label = { Text(stringResource(R.string.manufacturer_auth_tplink_email_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("you@example.com") }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Password
+                    var showPassword by remember { mutableStateOf(false) }
+                    OutlinedTextField(
+                        value = state.tpLink.password,
+                        onValueChange = { viewModel.updateTpLinkPassword(it) },
+                        label = { Text(stringResource(R.string.manufacturer_auth_tplink_password_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (showPassword) androidx.compose.ui.text.input.VisualTransformation.None
+                            else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { showPassword = !showPassword }) {
+                                Text(
+                                    if (showPassword) stringResource(R.string.manufacturer_auth_tplink_hide)
+                                    else stringResource(R.string.manufacturer_auth_tplink_show),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        },
+                        placeholder = { Text("••••••••") }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Кнопки
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        if (state.tpLink.enabled) {
+                            TextButton(
+                                onClick = { viewModel.clearTpLink() },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.manufacturer_auth_tplink_clear))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+
+                        Button(
+                            onClick = { viewModel.saveTpLink() },
+                            enabled = state.tpLink.username.isNotBlank()
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.manufacturer_auth_tplink_save))
+                        }
+                    }
+                }
+            }
+
             // Заглушка Яндекс
             Card(
                 modifier = Modifier.fillMaxWidth(),

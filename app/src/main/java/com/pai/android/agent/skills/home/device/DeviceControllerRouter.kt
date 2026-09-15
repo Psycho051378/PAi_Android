@@ -11,13 +11,22 @@ import javax.inject.Singleton
 class DeviceControllerRouter @Inject constructor(
     private val wizController: WizController,
     private val yeelightController: YeelightController,
-    val miioController: MiioController
+    val miioController: MiioController,
+    private val shellyController: ShellyController,
+    private val tasmotaController: TasmotaController,
+    private val genericHttpController: GenericHttpController,
+    private val tpLinkKasaController: TpLinkKasaController
 ) {
     private val controllers: Map<String, DeviceController> = mapOf(
         "WIZ" to wizController,
         "YEELIGHT" to yeelightController,
         "MIIO" to miioController,
-        "ROBOROCK" to miioController
+        "ROBOROCK" to miioController,
+        "SHELLY" to shellyController,
+        "TASMOTA" to tasmotaController,
+        "GENERIC_HTTP" to genericHttpController,
+        "WLED" to genericHttpController,
+        "TPLINK_KASA" to tpLinkKasaController
     )
 
     /**

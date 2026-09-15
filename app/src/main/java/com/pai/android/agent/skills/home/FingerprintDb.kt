@@ -53,7 +53,8 @@ object FingerprintDb {
             ssdpSt = listOf("hue")),
 
         Entry("TP-Link Kasa", "TP-Link Kasa 💡", "💡",
-            tcp = listOf(9999),
+            tcp = listOf(9999, 80),
+            udp = listOf(20002),
             protocol = "kasa"),
 
         Entry("LIFX", "LIFX 💡", "💡",
@@ -69,12 +70,14 @@ object FingerprintDb {
             tcp = listOf(80, 8081, 8082),
             udp = listOf(5683),
             httpServer = listOf("shelly"),
-            httpBody = listOf("shelly")),
+            httpBody = listOf("shelly"),
+            protocol = "shelly"),
 
         Entry("Sonoff / Tasmota", "Sonoff/Tasmota 🔧", "🔧",
             tcp = listOf(80, 8080),
             httpBody = listOf("tasmota"),
-            httpServer = listOf("tasmota")),
+            httpServer = listOf("tasmota"),
+            protocol = "tasmota"),
 
         Entry("ESPHome", "ESPHome 🔧", "🔧",
             tcp = listOf(80, 6053),

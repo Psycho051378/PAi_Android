@@ -462,6 +462,14 @@
     <string name="manufacturer_auth_token_status">✅ — token obtained, device ready to control
 ⏳ — no token yet, device just discovered</string>
     <string name="manufacturer_auth_no_token_for_ip">No token found for %s. Authorize Xiaomi in settings.</string>
+    <string name="manufacturer_auth_tplink_title">TP-Link Kasa / Tapo</string>
+    <string name="manufacturer_auth_tplink_description">Login and password from your TP-Link account (required for Tapo devices). Older Kasa devices don\'t need this.</string>
+    <string name="manufacturer_auth_tplink_email_label">Email</string>
+    <string name="manufacturer_auth_tplink_password_label">Password</string>
+    <string name="manufacturer_auth_tplink_show">Show</string>
+    <string name="manufacturer_auth_tplink_hide">Hide</string>
+    <string name="manufacturer_auth_tplink_clear">Clear</string>
+    <string name="manufacturer_auth_tplink_save">Save</string>
     <string name="manufacturer_auth_yandex_placeholder">Yandex.Station support will be added later.</string>
     <string name="manufacturer_auth_token_instruction">Xiaomi devices (vacuum, humidifier) require a device token to be controlled locally. Enter the token manually (32 hex chars), obtained via third-party tools (e.g., Mi Home app backup dump).</string>
     <string name="manufacturer_auth_token_saved">✅ Token saved</string>

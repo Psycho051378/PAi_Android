@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pai.android.data.local.SmartHomeDao
 import com.pai.android.data.model.DeviceProtocol
+import com.pai.android.data.model.ManufacturerAuth
 import com.pai.android.data.model.SmartHomeDevice
+import com.pai.android.data.repository.ManufacturerRepository
 import com.pai.android.data.repository.SmartHomeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,14 +21,22 @@ data class MiioDeviceEntry(
     val token: String = ""
 )
 
+data class TpLinkCredentials(
+    val username: String = "",
+    val password: String = "",
+    val enabled: Boolean = false
+)
+
 data class ManufacturerUiState(
-    val devices: List<MiioDeviceEntry> = emptyList()
+    val devices: List<MiioDeviceEntry> = emptyList(),
+    val tpLink: TpLinkCredentials = TpLinkCredentials()
 )
 
 @HiltViewModel
 class ManufacturerSettingsViewModel @Inject constructor(
     private val smartHomeRepository: SmartHomeRepository,
-    private val smartHomeDao: SmartHomeDao
+    private val smartHomeDao: SmartHomeDao,
+    private val manufacturerRepository: ManufacturerRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ManufacturerUiState())
@@ -34,6 +44,7 @@ class ManufacturerSettingsViewModel @Inject constructor(
 
     init {
         loadDevices()
+        loadTpLink()
     }
 
     fun loadDevices() {
@@ -41,7 +52,7 @@ class ManufacturerSettingsViewModel @Inject constructor(
             try {
                 val allNets = smartHomeRepository.getAllNetworks()
                 if (allNets.isEmpty()) {
-                    _state.value = ManufacturerUiState(emptyList())
+                    _state.value = _state.value.copy(devices = emptyList())
                     return@launch
                 }
 
@@ -57,10 +68,79 @@ class ManufacturerSettingsViewModel @Inject constructor(
                     MiioDeviceEntry(device = device, token = token)
                 }
 
-                _state.value = ManufacturerUiState(devices = entries)
+                _state.value = _state.value.copy(devices = entries)
             } catch (e: Exception) {
                 println("ManufacturerSettingsVM: loadDevices error: ${e.message}")
             }
+        }
+    }
+
+    /** Загрузить настройки TP-Link из ManufacturerRepository. */
+    fun loadTpLink() {
+        viewModelScope.launch {
+            try {
+                val auth = manufacturerRepository.get("tplink")
+                val current = _state.value
+                if (auth != null) {
+                    val creds = try {
+                        JSONObject(auth.credentials)
+                    } catch (e: Exception) { JSONObject() }
+                    _state.value = current.copy(
+                        tpLink = TpLinkCredentials(
+                            username = creds.optString("username", ""),
+                            password = creds.optString("password", ""),
+                            enabled = auth.enabled
+                        )
+                    )
+                } else {
+                    _state.value = current.copy(tpLink = TpLinkCredentials())
+                }
+            } catch (e: Exception) {
+                println("ManufacturerSettingsVM: loadTpLink error: ${e.message}")
+            }
+        }
+    }
+
+    /** Обновить логин TP-Link (в UI). */
+    fun updateTpLinkUsername(username: String) {
+        _state.value = _state.value.copy(
+            tpLink = _state.value.tpLink.copy(username = username)
+        )
+    }
+
+    /** Обновить пароль TP-Link (в UI). */
+    fun updateTpLinkPassword(password: String) {
+        _state.value = _state.value.copy(
+            tpLink = _state.value.tpLink.copy(password = password)
+        )
+    }
+
+    /** Сохранить настройки TP-Link. */
+    fun saveTpLink() {
+        viewModelScope.launch {
+            val tp = _state.value.tpLink
+            val creds = JSONObject().apply {
+                put("username", tp.username)
+                put("password", tp.password)
+            }.toString()
+
+            val auth = ManufacturerAuth(
+                manufacturer = "tplink",
+                displayName = "TP-Link Kasa/Tapo",
+                authType = "login_password",
+                credentials = creds,
+                enabled = tp.username.isNotBlank(),
+                lastSynced = System.currentTimeMillis()
+            )
+            manufacturerRepository.save(auth)
+        }
+    }
+
+    /** Очистить настройки TP-Link. */
+    fun clearTpLink() {
+        viewModelScope.launch {
+            manufacturerRepository.delete("tplink")
+            _state.value = _state.value.copy(tpLink = TpLinkCredentials())
         }
     }
 
