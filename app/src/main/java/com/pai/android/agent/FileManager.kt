@@ -47,8 +47,8 @@ class FileManager constructor(
         }
     }
     
-    private fun ensureDirectory(dir: File) {
-        if (!dir.exists()) {
+    private fun ensureDirectory(dir: File?) {
+        if (dir != null && !dir.exists()) {
             dir.mkdirs()
         }
     }
@@ -60,8 +60,7 @@ class FileManager constructor(
     
     fun createDirectory(relativePath: String): File? {
         return try {
-            val normalized = normalizePath(relativePath)
-            val dir = File(workspaceRoot, normalized)
+            val dir = resolveSafe(relativePath) ?: return null
             ensureDirectory(dir)
             dir
         } catch (e: Exception) {
@@ -71,8 +70,7 @@ class FileManager constructor(
     
     fun writeFile(relativePath: String, content: String, append: Boolean = false): Boolean {
         return try {
-            val normalized = normalizePath(relativePath)
-            val file = File(workspaceRoot, normalized)
+            val file = resolveSafe(relativePath) ?: return false
             ensureDirectory(file.parentFile)
             if (append) {
                 FileWriter(file, true).use { it.write(content) }
@@ -87,14 +85,13 @@ class FileManager constructor(
     
     fun readFile(relativePath: String): String? {
         return try {
-            val normalized = normalizePath(relativePath)
-            val file = File(workspaceRoot, normalized)
+            val file = resolveSafe(relativePath) ?: return null
             if (file.exists() && file.isFile) {
                 file.readText(Charsets.UTF_8)
             } else {
                 // Try in incoming/ subdirectory
-                val incomingFile = File(File(workspaceRoot, "incoming"), normalized)
-                if (incomingFile.exists() && incomingFile.isFile) {
+                val incomingFile = resolveSafe("incoming/" + normalizePath(relativePath))
+                if (incomingFile != null && incomingFile.exists() && incomingFile.isFile) {
                     incomingFile.readText(Charsets.UTF_8)
                 } else {
                     null
@@ -107,8 +104,7 @@ class FileManager constructor(
     
     fun delete(relativePath: String, recursive: Boolean = true): Boolean {
         return try {
-            val normalized = normalizePath(relativePath)
-            val file = File(workspaceRoot, normalized)
+            val file = resolveSafe(relativePath) ?: return false
             if (file.isDirectory) {
                 if (recursive) file.deleteRecursively() else file.delete()
             } else {
@@ -121,8 +117,8 @@ class FileManager constructor(
     
     fun move(sourcePath: String, targetPath: String, overwrite: Boolean = false): Boolean {
         return try {
-            val sourceFile = File(workspaceRoot, sourcePath)
-            val targetFile = File(workspaceRoot, targetPath)
+            val sourceFile = resolveSafe(sourcePath) ?: return false
+            val targetFile = resolveSafe(targetPath) ?: return false
             if (!sourceFile.exists()) return false
             if (targetFile.exists() && !overwrite) return false
             ensureDirectory(targetFile.parentFile)
@@ -133,8 +129,7 @@ class FileManager constructor(
     }
     
     fun listFiles(relativePath: String = "", recursive: Boolean = false): List<FileInfo> {
-        val normalized = normalizePath(relativePath)
-        val dir = if (normalized.isBlank()) workspaceRoot else File(workspaceRoot, normalized)
+        val dir = resolveSafe(relativePath) ?: return emptyList()
         if (!dir.exists() || !dir.isDirectory) return emptyList()
         val files = mutableListOf<FileInfo>()
         val children = dir.listFiles() ?: return emptyList()
@@ -154,7 +149,6 @@ class FileManager constructor(
                     files.addAll(listFiles(fileRelativePath, true))
                 }
             } catch (_: Exception) {
-                // Skip files/dirs that cause errors (permission, encoding, etc.)
                 continue
             }
         }
@@ -180,8 +174,7 @@ class FileManager constructor(
     }
     
     fun getFullFile(relativePath: String): File? {
-        val normalized = normalizePath(relativePath)
-        val file = File(workspaceRoot, normalized)
+        val file = resolveSafe(relativePath) ?: return null
         return if (file.exists()) file else null
     }
     
@@ -200,24 +193,26 @@ class FileManager constructor(
         return result
     }
 
-    /**
-     * Normalizes a relative path: strips leading / and .
-     */
-    private fun normalizePath(path: String): String {
-        var p = path.trim()
-        if (p == "/" || p == ".") return ""
-        while (p.startsWith("/") || p.startsWith(".")) {
-            p = p.removePrefix("/").removePrefix(".")
-        }
-        return p.trimStart('/')
-    }
+    /** Нормализация пути вынесена в чистый тестируемый WorkspacePaths. */
+    private fun normalizePath(path: String): String = WorkspacePaths.normalize(path)
 
     /**
-     * Generates a directory tree structure (linux tree style).
+     * Разрешает относительный путь в File, гарантированно лежащий внутри [workspaceRoot].
+     * null — для небезопасных путей (path traversal).
      */
+    private fun resolveSafe(relativePath: String): File? {
+        val file = File(workspaceRoot, WorkspacePaths.normalize(relativePath))
+        return try {
+            val rootPath = workspaceRoot.canonicalFile.path
+            val targetPath = file.canonicalFile.path
+            if (WorkspacePaths.isInside(rootPath, targetPath)) file else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun generateTree(relativePath: String = "", maxDepth: Int = 5): String {
-        val normalized = normalizePath(relativePath)
-        val rootDir = if (normalized.isBlank()) workspaceRoot else File(workspaceRoot, normalized)
+        val rootDir = resolveSafe(relativePath) ?: return "[Path not found: $relativePath]"
         if (!rootDir.exists()) return "[Path not found: $relativePath]"
         val sb = StringBuilder()
         sb.append(rootDir.name).append("/\n")
@@ -250,14 +245,10 @@ class FileManager constructor(
         }
     }
 
-    /**
-     * Reads ALL files in a directory recursively and returns content as Markdown.
-     */
     fun readDirectory(relativePath: String = "", maxFileSize: Long = 50000, maxTotalChars: Int = 30000): String {
-        val normalized = normalizePath(relativePath)
-        val rootDir = if (normalized.isBlank()) workspaceRoot else File(workspaceRoot, normalized)
+        val rootDir = resolveSafe(relativePath) ?: return "[Path not found: $relativePath]"
         if (!rootDir.exists()) return "[Path not found: $relativePath]"
-        val files = listFiles(normalized, recursive = true)
+        val files = listFiles(normalizePath(relativePath), recursive = true)
         val sb = StringBuilder()
         var totalChars = 0
         var skippedCount = 0
@@ -288,8 +279,7 @@ class FileManager constructor(
     }
 
     fun getFileInfo(relativePath: String): FileInfo? {
-        val normalized = normalizePath(relativePath)
-        val file = File(workspaceRoot, normalized)
+        val file = resolveSafe(relativePath) ?: return null
         if (!file.exists()) return null
         return FileInfo(
             path = relativePath,
