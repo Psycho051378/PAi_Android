@@ -52,6 +52,9 @@ class PaiApplication : Application(), Configuration.Provider {
             android.util.Log.e("PaiApp", "Chaquopy Python start failed", e)
         }
 
+        // Инициализируем верификатор Python-кода (Chaquopy уже стартовал)
+        com.pai.android.agent.skills.PythonVerifier.init(this)
+
         localeManager = LocaleManager(this)
         localeManager.applyLocale(this)
         // Init Logger to capture println() into ring buffer
