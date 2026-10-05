@@ -17,7 +17,8 @@ data class SkillManifest(
     val skip_words: List<String> = emptyList(),  // слова для очистки из запроса
     val timeout: Int = 30,  // таймаут выполнения в секундах (по умолчанию 30)
     val params: Map<String, String> = emptyMap(),  // paramName -> type
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val sha256: String = ""  // ожидаемая SHA-256 скрипта навыка (пусто = без подписи)
 )
 
 data class SkillIndex(

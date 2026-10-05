@@ -1,18 +1,20 @@
 package com.pai.android.agent
 
-import com.pai.android.data.model.PermanentMemory
 import com.pai.android.data.repository.MemoryRepository
-import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * ProjectManager — оркестратор долгосрочных задач.
  * Хранит проекты, их статус, структуру и историю.
+ *
+ * Хранилище проектов теперь файловое ([ProjectStore]) — устойчиво к «Row too big»/CursorWindow.
+ * MemoryRepository остаётся только для опциональной сводки по проекту.
  */
 @Singleton
 class ProjectManager @Inject constructor(
-    private val memoryRepository: MemoryRepository
+    private val memoryRepository: MemoryRepository,
+    private val projectStore: ProjectStore
 ) {
     companion object {
         private const val MEMORY_CATEGORY = "project_manager"
@@ -42,64 +44,42 @@ class ProjectManager @Inject constructor(
 
     /** Создаёт новый проект. */
     suspend fun createProject(name: String, description: String, steps: List<String>): Project {
-        val id = "project_${System.currentTimeMillis()}_${name.filter { it.isLetterOrDigit() }.take(20)}"
+        val id = "project_" + System.currentTimeMillis() + "_" + name.filter { it.isLetterOrDigit() }.take(20)
         val project = Project(
             id = id,
             name = name,
             description = description,
             status = ProjectStatus.ACTIVE,
-            steps = steps.mapIndexed { i, s ->
-                ProjectStep(id = "step_$i", description = s, status = StepStatus.PENDING)
-            }
+            steps = steps.mapIndexed { i, s -> ProjectStep(id = "step_$i", description = s, status = StepStatus.PENDING) }
         )
         saveProject(project)
-        println("📁 Project created: $name ($id, ${steps.size} steps)")
+        println("📁 Project created: $name ($id, " + steps.size + " steps)")
         return project
     }
 
-    /** Возвращает список всех проектов. */
+    /** Возвращает список всех проектов (битые файлы пропускаются, остальные читаются). */
     suspend fun listProjects(): List<Project> {
-        return try {
-            val facts = memoryRepository.searchFactsInScope("project", "", 200)
-            val projectFacts = facts.filter {
-                it.category == MEMORY_CATEGORY &&
-                    it.key.startsWith("project_") &&
-                    !it.key.endsWith("_steps") &&
-                    !it.key.endsWith("_summary")
+        val result = mutableListOf<Project>()
+        for (id in projectStore.listIds()) {
+            val raw = projectStore.read(id) ?: continue
+            val p = try { deserialize(raw) } catch (e: Exception) {
+                println("⚠️ ProjectManager: пропускаю повреждённый проект '" + id + "': " + e.message); null
             }
-            // Пропускаем отдельные повреждённые записи, НЕ теряя остальные проекты.
-            projectFacts.mapNotNull { fact ->
-                try {
-                    deserialize(fact)
-                } catch (e: Exception) {
-                    println("⚠️ ProjectManager: пропускаю повреждённый проект '${fact.key}': ${e.message}")
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            if (e.message?.contains("CursorWindow") == true || e.message?.contains("Row too big") == true) {
-                onCorruptedStorage("${e.message}")
-            } else {
-                println("⚠️ ProjectManager.listProjects error: ${e.message}")
-            }
-            emptyList()
+            if (p != null) result.add(p)
         }
-    }
-
-    private fun onCorruptedStorage(reason: String) {
-        println("⚠️ ProjectManager: хранилище проектов повреждено ($reason). Данные НЕ удаляю — нужна ручная проверка.")
+        return result
     }
 
     /** Загружает проект по ID. */
     suspend fun getProject(id: String): Project? {
-        val fact = memoryRepository.getFactByCategoryAndKey(MEMORY_CATEGORY, id) ?: return null
-        return deserialize(fact)
+        val raw = projectStore.read(id) ?: return null
+        return deserialize(raw)
     }
 
     /** Обновляет статус шага и проекта. */
     suspend fun updateStep(
         projectId: String, stepIndex: Int, status: StepStatus,
-        result: String? = null, workspaceDir: String = ""
+        result: String? = null, workspaceDir: String = "",
     ): Project? {
         val project = getProject(projectId) ?: return null
         if (stepIndex < 0 || stepIndex >= project.steps.size) return null
@@ -121,11 +101,9 @@ class ProjectManager @Inject constructor(
         )
         saveProject(updated)
 
-        // Создаём снапшот при завершении шага
         if (status == StepStatus.DONE) {
             saveSnapshot(projectId, stepIndex, workspaceDir)
         }
-
         return updated
     }
 
@@ -162,95 +140,90 @@ class ProjectManager @Inject constructor(
                 updatedAt = System.currentTimeMillis()
             )
             saveProject(updated)
-            println("📸 Snapshot: step ${stepIndex + 1}/${project.steps.size}")
+            println("📸 Snapshot: step " + (stepIndex + 1) + "/" + project.steps.size)
         } catch (e: Exception) {
-            println("⚠️ Snapshot error: ${e.message}")
+            println("⚠️ Snapshot error: " + e.message)
         }
     }
 
     /** Завершает проект. */
     suspend fun completeProject(projectId: String, summary: String? = null): Project? {
         val project = getProject(projectId) ?: return null
-        val updated = project.copy(
-            status = ProjectStatus.COMPLETED,
-            updatedAt = System.currentTimeMillis()
-        )
+        val updated = project.copy(status = ProjectStatus.COMPLETED, updatedAt = System.currentTimeMillis())
         saveProject(updated)
         if (summary != null) {
-            memoryRepository.savePermanentFactFull(
-                category = MEMORY_CATEGORY,
-                key = "${project.id}_summary",
-                value = summary,
-                confidence = 0.5f,
-                scope = "project",
-                tags = null
-            )
+            try {
+                memoryRepository.savePermanentFactFull(
+                    category = MEMORY_CATEGORY,
+                    key = project.id + "_summary",
+                    value = summary,
+                    confidence = 0.5f,
+                    scope = "project",
+                    tags = null
+                )
+            } catch (e: Exception) {
+                println("⚠️ completeProject summary save failed: " + e.message)
+            }
         }
-        println("✅ Project completed: ${project.name}")
+        println("✅ Project completed: " + project.name)
         return updated
     }
 
-    /** Сохраняет проект в память. */
+    /** Сохраняет проект в файловое хранилище. */
     private suspend fun saveProject(project: Project) {
-        val header = "${project.id}|${project.name}|${project.description}|${project.status.name}|${project.currentStepIndex}|${project.createdAt}|${project.updatedAt}|${project.snapshotCount}"
-        memoryRepository.savePermanentFactFull(
-            category = MEMORY_CATEGORY,
-            key = project.id,
-            value = header,
-            confidence = 0.5f,
-            scope = "project",
-            tags = null
-        )
-        // Сохраняем шаги отдельно
-        val stepsJson = org.json.JSONArray()
-        for (step in project.steps) {
-            val obj = org.json.JSONObject()
-            obj.put("id", step.id)
-            obj.put("desc", step.description)
-            obj.put("status", step.status.name)
-            if (step.result != null) obj.put("result", step.result)
-            stepsJson.put(obj)
-        }
-        memoryRepository.savePermanentFactFull(
-            category = MEMORY_CATEGORY,
-            key = "${project.id}_steps",
-            value = stepsJson.toString(2),
-            confidence = 0.5f,
-            scope = "project",
-            tags = null
-        )
+        projectStore.write(project.id, serialize(project))
     }
 
-    /** Десериализует проект из PermanentMemory. */
-    private suspend fun deserialize(fact: PermanentMemory): Project? {
+    private fun serialize(project: Project): String {
+        val steps = org.json.JSONArray()
+        for (s in project.steps) {
+            steps.put(org.json.JSONObject().apply {
+                put("id", s.id)
+                put("description", s.description)
+                put("status", s.status.name)
+                if (s.result != null) put("result", s.result)
+            })
+        }
+        return org.json.JSONObject().apply {
+            put("id", project.id)
+            put("name", project.name)
+            put("description", project.description)
+            put("status", project.status.name)
+            put("currentStepIndex", project.currentStepIndex)
+            put("createdAt", project.createdAt)
+            put("updatedAt", project.updatedAt)
+            put("snapshotCount", project.snapshotCount)
+            put("steps", steps)
+        }.toString()
+    }
+
+    /** Десериализует проект из JSON. */
+    private fun deserialize(json: String): Project? {
         return try {
-            val parts = fact.value.split("|")
-            if (parts.size < 7) return null
-            val id = parts[0]
-            val stepsFact = memoryRepository.getFactByCategoryAndKey(MEMORY_CATEGORY, "${id}_steps") ?: return null
-            val stepsArr = org.json.JSONArray(stepsFact.value)
+            val o = org.json.JSONObject(json)
+            val stepsArr = o.optJSONArray("steps") ?: org.json.JSONArray()
             val steps = (0 until stepsArr.length()).map { i ->
-                val obj = stepsArr.getJSONObject(i)
+                val s = stepsArr.getJSONObject(i)
                 ProjectStep(
-                    id = obj.getString("id"),
-                    description = obj.getString("desc"),
-                    status = StepStatus.valueOf(obj.getString("status")),
-                    result = obj.optString("result", null)
+                    id = s.getString("id"),
+                    description = s.getString("description"),
+                    status = StepStatus.valueOf(s.getString("status")),
+                    result = if (s.has("result")) s.optString("result") else null
                 )
             }
             Project(
-                id = id,
-                name = parts[1],
-                description = parts[2],
-                status = ProjectStatus.valueOf(parts[3]),
+                id = o.getString("id"),
+                name = o.getString("name"),
+                description = o.optString("description", ""),
+                status = ProjectStatus.valueOf(o.getString("status")),
                 steps = steps,
-                currentStepIndex = parts[4].toIntOrNull() ?: 0,
-                createdAt = parts[5].toLongOrNull() ?: System.currentTimeMillis(),
-                updatedAt = parts[6].toLongOrNull() ?: System.currentTimeMillis(),
-                snapshotCount = parts.getOrNull(7)?.toIntOrNull() ?: 0
+                currentStepIndex = o.optInt("currentStepIndex", 0),
+                createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                updatedAt = o.optLong("updatedAt", System.currentTimeMillis()),
+                snapshotCount = o.optInt("snapshotCount", 0)
             )
         } catch (e: Exception) {
-            println("⚠️ ProjectManager: deserialize error: ${e.message}")
+            println("⚠️ ProjectManager: deserialize error: " + e.message)
             null
         }
     }
@@ -260,13 +233,12 @@ class ProjectManager @Inject constructor(
         val existingSteps = project.steps.toMutableList()
         val startIdx = existingSteps.size
         val stepsToAdd = newSteps.mapIndexed { i, s ->
-            ProjectStep(id = "step_${startIdx + i}", description = s, status = StepStatus.PENDING)
+            ProjectStep(id = "step_" + (startIdx + i), description = s, status = StepStatus.PENDING)
         }
         existingSteps.addAll(stepsToAdd)
-        // Reset currentStepIndex to the first new step so execute() picks them up
         val updated = project.copy(steps = existingSteps, currentStepIndex = startIdx, updatedAt = System.currentTimeMillis())
         saveProject(updated)
-        println("📋 Added ${stepsToAdd.size} steps to project '${project.name}' (from step $startIdx)")
+        println("📋 Added " + stepsToAdd.size + " steps to project '" + project.name + "' (from step " + startIdx + ")")
         return updated
     }
 }

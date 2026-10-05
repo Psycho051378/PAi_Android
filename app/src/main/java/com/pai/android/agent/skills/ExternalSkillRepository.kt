@@ -92,7 +92,8 @@ class ExternalSkillRepository @Inject constructor(
                     } ?: emptyList(),
                     params = json.optJSONObject("params")?.let { obj ->
                         obj.keys().asSequence().associateWith { obj.getString(it) }
-                    } ?: emptyMap()
+                    } ?: emptyMap(),
+                    sha256 = json.optString("sha256", "")
                 )
                 return@withContext manifest
             } catch (e: Exception) {
@@ -286,8 +287,20 @@ class ExternalSkillRepository @Inject constructor(
                             (0 until arr.length()).map { arr.getString(it) }
                         } ?: emptyList(),
                         timeout = json.optInt("timeout", 30),
-                        enabled = json.optBoolean("enabled", true)
+                        enabled = json.optBoolean("enabled", true),
+                        sha256 = json.optString("sha256", "")
                     )
+                    // Проверка подписи: если в манифесте указан sha256 — он обязан совпасть со скриптом.
+                    val expectedSha = manifest.sha256
+                    if (expectedSha.isNotBlank() && manifest.mainScript.isNotBlank()) {
+                        val scriptFile = java.io.File(skillsDirectory, manifest.mainScript)
+                        val verified = scriptFile.exists() &&
+                            com.pai.android.agent.SkillTrust.verify(scriptFile.readBytes(), expectedSha)
+                        if (!verified) {
+                            println("ExternalSkillRepo: ⛔ подпись навыка '" + manifest.name + "' не подтверждена — навык НЕ регистрирую")
+                            return@forEach
+                        }
+                    }
                     // Respect the saved toggle state from installed list
                     val savedState = getInstalledSkills().find { it.id == manifest.id }?.enabled
                     val finalEnabled = savedState ?: manifest.enabled
