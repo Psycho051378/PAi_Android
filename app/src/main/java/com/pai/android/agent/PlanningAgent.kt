@@ -708,9 +708,21 @@ class PlanningAgent @Inject constructor(
             builder.append("$emoji Шаг ${index + 1}: ${result.step.description}\n")
             if (!result.success && result.error != null) {
                 builder.append("   Ошибка: ${result.error}\n")
+            } else if (result.output.isNotBlank()) {
+                // Показываем результат шага — в нём путь к созданному файлу
+                builder.append("   " + result.output.take(500) + "\n")
             }
         }
-        
+
+        // Созданные файлы (пути из data) — чтобы в ответе был путь/ссылка, а не только «открой»
+        val createdFiles = executionResult.stepResults
+            .mapNotNull { it.data?.get("path")?.toString()?.takeIf { p -> p.isNotBlank() } }
+            .distinct()
+        if (createdFiles.isNotEmpty()) {
+            builder.append("\n📄 **Файлы:**\n")
+            createdFiles.forEach { builder.append("• `" + it + "`\n") }
+        }
+
         builder.append("\n⏱️ **Общее время выполнения:** ${executionResult.totalExecutionTimeMs} мс")
         
         return builder.toString()
