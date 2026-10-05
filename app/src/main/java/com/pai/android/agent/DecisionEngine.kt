@@ -670,6 +670,7 @@ listOf(
                             manifestJson = manifestJson.replace(Regex("\"mainScript\"\\s*:\\s*\"[^\\\\\"]+\""), "\"mainScript\": \"" + skillName + ".py\"")
                             manifestJson = manifestJson.replace(Regex("\"type\"\\s*:\\s*\"[^\\\\\"]+\""), "\"type\": \"python\"")
                             if (!manifestJson.contains("\"enabled\"")) manifestJson = manifestJson.trimEnd('}') + ",\"enabled\": false}"
+                            if (!manifestJson.contains("\"triggers\"")) manifestJson = manifestJson.trimEnd('}') + ",\"triggers\": [\"" + skillName + "\"]}"
                             // ── Проверка кода на работоспособность + одна попытка авто-починки ──
                             var verify = com.pai.android.agent.skills.PythonVerifier.checkSyntax(scriptCode)
                             if (!verify.ok) {
@@ -710,7 +711,7 @@ listOf(
                             // пока пользователь не проверит код и не включит его. Это и есть верификация пользователем.
                             println("createSkill: skill saved DISABLED, awaiting user review: " + skillName)
                             return@withContext AgentResponse.Success(
-                                answer = "🆕 Навык \"" + skillName + "\" создан, но ПОКА ОТКЛЮЧЁН. Проверьте код и включите его в разделе «Навыки».\n\nПроверка: " + com.pai.android.agent.skills.PythonVerifier.describe(verify) + (if (smoke != null) ", " + com.pai.android.agent.skills.PythonVerifier.describe(smoke) else "") + "\n\nФайлы: `" + skillName + ".py`, `" + skillName + ".json`\n\nКод (первые 600 символов):\n```python\n" + scriptCode.take(600) + "\n```",
+                                answer = "🆕 Навык \"" + skillName + "\" создан, но ПОКА ОТКЛЮЧЁН. Проверьте код и включите его в разделе «Навыки».\n\nПроверка: " + com.pai.android.agent.skills.PythonVerifier.describe(verify) + (if (smoke != null) ", " + com.pai.android.agent.skills.PythonVerifier.describe(smoke) else "") + "\nАктивация — скажите одну из фраз: " + manifest.triggers.joinToString(", ") { "«" + it + "»" } + "\n\nФайлы: `" + skillName + ".py`, `" + skillName + ".json`\n\nКод (первые 600 символов):\n```python\n" + scriptCode.take(600) + "\n```",
                                 thoughts = listOf("local skill created (disabled, awaiting user review)"), actions = emptyList()
                             )
                         } catch (e: Exception) {
