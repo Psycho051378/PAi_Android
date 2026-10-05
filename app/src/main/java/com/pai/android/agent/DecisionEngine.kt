@@ -963,6 +963,18 @@ listOf(
                                 append("✅ $desc")
                             }
                         }
+
+                        // Созданные/изменённые файлы — чтобы в ответе был путь, а не только «готово»
+                        val createdPaths = results.entries
+                            .filter { it.key.endsWith("_path") }
+                            .map { it.value.toString() }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+                        if (createdPaths.isNotEmpty()) {
+                            appendLine()
+                            appendLine("📄 **Файлы:**")
+                            createdPaths.forEach { p -> appendLine("• `" + p + "`") }
+                        }
                     }
                     val finalAnswerTrimmed = finalAnswer.trimEnd()
                     println("✅ Plan completed: ${plan.steps.size} steps")
