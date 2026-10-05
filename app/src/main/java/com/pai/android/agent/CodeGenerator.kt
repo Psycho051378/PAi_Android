@@ -118,6 +118,16 @@ class CodeGenerator @Inject constructor(
                         val ce = if (index + 1 < fileMatches.size) fileMatches[index + 1].range.first else text.length
                         val content = text.substring(cs, ce).trim()
                         if (content.isBlank()) { errors.add("$filePath: empty"); failCount++; continue }
+                        // Проверка .py на синтаксис перед записью — битый код не сохраняем
+                        if (filePath.endsWith(".py")) {
+                            val v = com.pai.android.agent.skills.PythonVerifier.checkSyntax(content)
+                            if (!v.ok) {
+                                errors.add("$filePath: syntax error — ${v.message.take(200)}")
+                                failCount++
+                                println("❌ CodeGenerator: .py syntax error, NOT written: $filePath — ${v.message.take(200)}")
+                                continue
+                            }
+                        }
                         if (fileManager.writeFile(filePath, content)) {
                             println("✅ CodeGenerator wrote: $filePath (${content.length} chars)")
                             successCount++
