@@ -108,12 +108,16 @@ class TaskQueue @Inject constructor(
                         val filesAfter = try {
                             fileManager.listFiles(projectPath).associate { it.path to it.lastModified }
                         } catch (e: Exception) { emptyMap() }
-                        val anyModified = filesAfter.size != filesBefore.size ||
-                            filesAfter.any { (pth, time) -> filesBefore[pth] != time }
-                        val ok = success && !stepResult.startsWith("FAILED")
-                        // Шаг 1 создаёт проект (файлов "до" нет); остальные обязаны реально писать файлы.
-                        stepOk = ok && (stepIndex == 0 || anyModified)
-                        if (!stepOk) println("⚠️ Step " + (stepIndex + 1) + ": нет изменений или ошибка (attempt " + attempt + ")")
+                        val outcome = StepVerdict.decide(
+                            success = success && !stepResult.startsWith("FAILED"),
+                            stepIndex = stepIndex,
+                            filesBefore = filesBefore,
+                            filesAfter = filesAfter,
+                            attempt = attempt,
+                            maxAttempts = maxAttempts
+                        )
+                        stepOk = outcome == StepVerdict.Outcome.DONE
+                        if (!stepOk) println("⚠️ Step " + (stepIndex + 1) + ": " + outcome + " (attempt " + attempt + "/" + maxAttempts + ")")
                     }
 
                     if (stepOk) {
