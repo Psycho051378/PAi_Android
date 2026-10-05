@@ -108,6 +108,7 @@ class CodeGenerator @Inject constructor(
                 var successCount = 0
                 var failCount = 0
                 val errors = mutableListOf<String>()
+                val warnings = mutableListOf<String>()
                 val execOutputs = mutableListOf<String>()
 
                 // Write file blocks
@@ -132,6 +133,14 @@ class CodeGenerator @Inject constructor(
                             println("✅ CodeGenerator wrote: $filePath (${content.length} chars)")
                             successCount++
                         } else { errors.add("$filePath: write failed"); failCount++ }
+                        // Структурная проверка HTML/JS/CSS (предупреждение, запись не блокирует)
+                        if (filePath.endsWith(".html") || filePath.endsWith(".htm") || filePath.endsWith(".js") || filePath.endsWith(".css")) {
+                            val w = com.pai.android.agent.WebAssetVerifier.validate(filePath, content)
+                            if (!w.ok) {
+                                warnings.add("$filePath: ${w.message}")
+                                println("⚠️ CodeGenerator: structural warning $filePath — ${w.message}")
+                            }
+                        }
                     }
                 } else {
                     val defaultPath = targetPaths.firstOrNull() ?: "projects/output.html"
@@ -175,6 +184,7 @@ class CodeGenerator @Inject constructor(
                 val resultMsg = buildString {
                     if (successCount > 0) append("✅ Written $successCount file(s)")
                     if (failCount > 0) append(" ⚠️ $failCount failed: ${errors.joinToString("; ")}")
+                    if (warnings.isNotEmpty()) append(" ⚠️ Проверка структуры: ${warnings.joinToString("; ")}")
                     if (execOutputs.isNotEmpty()) {
                         append("\n\n=== Execution Results ===\n")
                         append(execOutputs.joinToString("\n\n"))
