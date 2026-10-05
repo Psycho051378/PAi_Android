@@ -926,6 +926,36 @@ fun MessageItemWithActions(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
+
+                // Кнопки «Открыть» для файлов, созданных агентом в workspace
+                if (!isUser) {
+                    val filePaths = extractAgentFilePaths(message.content)
+                        .filter { agentWorkspaceFile(context1, it).exists() }
+                    if (filePaths.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "📄 Файлы:", fontSize = 12.sp, color = Color.Gray)
+                        filePaths.forEach { p ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { openAgentWorkspaceFile(context1, p) }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = UiAlignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.OpenInNew,
+                                    contentDescription = "Открыть",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = p, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
                 
                 // Время + модель сообщения
                 if (attachments.isNotEmpty()) {
