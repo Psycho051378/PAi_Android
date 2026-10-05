@@ -308,6 +308,13 @@ private fun InstalledSkillCard(
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                 Text(skill.description, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (skill.triggers.isNotEmpty()) {
+                    Text(
+                        text = "Триггеры: " + skill.triggers.joinToString(", ") { "«" + it + "»" },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
             Switch(checked = skill.enabled, onCheckedChange = { onToggle() })
             IconButton(onClick = onRemove) {
