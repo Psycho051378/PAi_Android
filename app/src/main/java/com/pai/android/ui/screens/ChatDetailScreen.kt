@@ -930,7 +930,7 @@ fun MessageItemWithActions(
                 // Кнопки «Открыть» для файлов, созданных агентом в workspace
                 if (!isUser) {
                     val filePaths = extractAgentFilePaths(message.content)
-                        .filter { agentWorkspaceFile(context1, it).exists() }
+                        .filter { resolveAgentFile(context1, it) != null }
                     if (filePaths.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(text = "📄 Файлы:", fontSize = 12.sp, color = Color.Gray)

@@ -6,29 +6,40 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 
-/** Находит пути файлов, упомянутые в ответе агента (в бэктиках, с расширением). */
+/** Находит пути/имена файлов, упомянутые в ответе агента (в бэктиках, с расширением). */
 private val AGENT_FILE_PATH_REGEX = Regex("`([^`]+)`")
 
 internal fun extractAgentFilePaths(text: String): List<String> =
     AGENT_FILE_PATH_REGEX.findAll(text)
         .map { it.groupValues[1].trim() }
         .filter { cand ->
-            cand.contains('/') &&
-                !cand.contains("://") &&
+            !cand.contains("://") &&
                 !cand.startsWith("http") &&
                 cand.none { it == ' ' || it == '\n' || it == '\t' } &&
+                !cand.contains('{') && !cand.contains('(') &&
                 cand.substringAfterLast('.', "").length in 1..6
         }
         .distinct()
         .toList()
 
-internal fun agentWorkspaceFile(context: Context, relativePath: String): File =
-    File(File(context.getExternalFilesDir(null), "workspace"), relativePath)
+private fun workspaceRoot(context: Context): File =
+    File(context.getExternalFilesDir(null), "workspace")
+
+/** Находит файл в workspace: сначала точный путь, затем поиск по имени (рекурсивно). */
+internal fun resolveAgentFile(context: Context, relativePath: String): File? {
+    val root = workspaceRoot(context)
+    val direct = File(root, relativePath)
+    if (direct.exists() && direct.isFile) return direct
+    val name = relativePath.substringAfterLast('/')
+    if (name.isBlank()) return null
+    return root.walkTopDown()
+        .firstOrNull { it.isFile && it.name.equals(name, ignoreCase = true) }
+}
 
 /** Открывает файл из workspace во внешнем приложении (или сообщает, если не нашлось). */
 internal fun openAgentWorkspaceFile(context: Context, relativePath: String) {
-    val file = agentWorkspaceFile(context, relativePath)
-    if (!file.exists()) {
+    val file = resolveAgentFile(context, relativePath)
+    if (file == null) {
         Toast.makeText(context, "Файл не найден: " + relativePath, Toast.LENGTH_SHORT).show()
         return
     }
