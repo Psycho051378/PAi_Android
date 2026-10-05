@@ -305,15 +305,18 @@ class ExternalSkillRepository @Inject constructor(
                     val savedState = getInstalledSkills().find { it.id == manifest.id }?.enabled
                     val finalEnabled = savedState ?: manifest.enabled
                     val effectiveManifest = manifest.copy(enabled = finalEnabled)
+                    // Всегда фиксируем в списке установленных (чтобы навык был виден в «Навыках»),
+                    // но регистрируем только включённые — отключённый ждёт проверки пользователем.
+                    val existing = getInstalledSkills().toMutableList()
+                    existing.removeAll { it.id == effectiveManifest.id }
+                    existing.add(effectiveManifest)
+                    saveInstalledList(existing)
                     if (effectiveManifest.enabled) {
                         val localAdapter = ExternalSkillAdapter(effectiveManifest, pythonSkill, skillsDirectory)
                         skillRegistry.register(localAdapter)
-                        // Add to installed list without reload (avoids recursion)
-                        val existing = getInstalledSkills().toMutableList()
-                        existing.removeAll { it.id == effectiveManifest.id }
-                        existing.add(effectiveManifest)
-                        saveInstalledList(existing)
                         println("ExternalSkillRepo: registered local '" + localAdapter.name + "'")
+                    } else {
+                        println("ExternalSkillRepo: '" + effectiveManifest.name + "' сохранён, но ОТКЛЮЧЁН (ждёт проверки)")
                     }
                 } catch (e: Exception) {
                     println("ExternalSkillRepo: scan local failed for " + file.name + ": " + e.message)
