@@ -34,7 +34,8 @@ class ExternalSkillRepository @Inject constructor(
      * Загружает список доступных навыков из репозитория.
      */
     suspend fun fetchAvailableSkills(): List<SkillIndexEntry> = withContext(Dispatchers.IO) {
-        val urls = listOf("$repositoryBaseUrl/index.json", "$LOCAL_URL/index.json")
+        // plaintext LAN-фолбэк убран (безопасность): только HTTPS-источник
+        val urls = listOf("$repositoryBaseUrl/index.json")
         for (urlStr in urls) {
             try {
                 val url = URL(urlStr)
@@ -66,11 +67,8 @@ class ExternalSkillRepository @Inject constructor(
      * Загружает манифест конкретного навыка.
      */
     suspend fun fetchManifest(manifestUrl: String): SkillManifest? = withContext(Dispatchers.IO) {
-        val urls = listOf(
-            manifestUrl,
-            manifestUrl.replace("pai.com.ru/skills", "http://10.0.2.2:8005/skills"),
-            manifestUrl.replace("https://pai.com.ru/skills", "http://10.0.2.2:8005/skills")
-        )
+        // только исходный URL манифеста (HTTPS-источник)
+        val urls = listOf(manifestUrl)
         for (urlStr in urls) {
             try {
                 val url = URL(urlStr)

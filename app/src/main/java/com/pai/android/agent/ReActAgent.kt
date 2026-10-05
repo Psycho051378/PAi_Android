@@ -40,7 +40,7 @@ class ReActAgent @Inject constructor(
                 val memoryContext = buildMemoryContext(query)
                 // ---- PRELIMINARY PLANNING ----
                 val estimated = estimateRequiredSteps(query, memoryContext)
-                val effectiveMaxSteps = (estimated * 2).coerceIn(30, 100)
+                val effectiveMaxSteps = (estimated * 2).coerceIn(10, 20)
                 println("🔮 Estimated steps: $estimated → limit set to $effectiveMaxSteps")
 
                 val toolsDesc = toolRegistry.getToolsDescription()
@@ -68,11 +68,11 @@ class ReActAgent @Inject constructor(
                             "Only 2 steps left. If task is complete, return 'done': true."))
                     }
 
-                    val response = aiRepository.sendMessage(
+                    val response = kotlinx.coroutines.withTimeout(180_000L) { aiRepository.sendMessage(
                         messages = messages,
                         systemPrompt = "You are a ReAct agent. Reply with JSON only.",
                         memoryContext = memoryContext
-                    )
+                    ) }
                     if (!response.isSuccess) {
                         return@withContext AgentResponse.Error(error = "LLM error: ${response.exceptionOrNull()?.message}")
                     }

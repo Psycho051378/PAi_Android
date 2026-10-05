@@ -61,19 +61,33 @@ class ProjectManager @Inject constructor(
     suspend fun listProjects(): List<Project> {
         return try {
             val facts = memoryRepository.searchFactsInScope("project", "", 200)
-            val projectFacts = facts.filter { it.category == MEMORY_CATEGORY && it.key.startsWith("project_") }
-            projectFacts.mapNotNull { deserialize(it) }
+            val projectFacts = facts.filter {
+                it.category == MEMORY_CATEGORY &&
+                    it.key.startsWith("project_") &&
+                    !it.key.endsWith("_steps") &&
+                    !it.key.endsWith("_summary")
+            }
+            // Пропускаем отдельные повреждённые записи, НЕ теряя остальные проекты.
+            projectFacts.mapNotNull { fact ->
+                try {
+                    deserialize(fact)
+                } catch (e: Exception) {
+                    println("⚠️ ProjectManager: пропускаю повреждённый проект '${fact.key}': ${e.message}")
+                    null
+                }
+            }
         } catch (e: Exception) {
             if (e.message?.contains("CursorWindow") == true || e.message?.contains("Row too big") == true) {
-                println("⚠️ ProjectManager: corrupted data detected, clearing")
-                clearAllProjects()
+                onCorruptedStorage("${e.message}")
+            } else {
+                println("⚠️ ProjectManager.listProjects error: ${e.message}")
             }
             emptyList()
         }
     }
 
-    private suspend fun clearAllProjects() {
-        println("⚠️ ProjectManager: old project data needs manual clear")
+    private fun onCorruptedStorage(reason: String) {
+        println("⚠️ ProjectManager: хранилище проектов повреждено ($reason). Данные НЕ удаляю — нужна ручная проверка.")
     }
 
     /** Загружает проект по ID. */

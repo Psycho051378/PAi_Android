@@ -32,6 +32,7 @@ class TaskQueue @Inject constructor(
                 var stepIndex = project.currentStepIndex
                 val results = mutableListOf<String>()
                 var currentProject = project
+                var anyFailed = false
                 while (stepIndex < project.steps.size) {
                     val freshProject = projectManager.getProject(projectId) ?: break
                     currentProject = freshProject
@@ -82,43 +83,61 @@ class TaskQueue @Inject constructor(
                         append(" Do NOT skip. Write real code now.")
                     }
 
-                    val stepResult: String
-                    println("🎯 CodeGenerator for step " + (stepIndex + 1))
                     val projectDirPath = "projects/" + projectFolder
-                    val (success, msg) = codeGenerator.generate(
-                        stepDescription = step.description,
-                        projectContext = "Project: " + project.name + " | Location: " + projectDirPath,
-                        existingFiles = stepQuery.toString(),
-                        projectDir = projectDirPath
-                    )
-                    stepResult = if (success) msg else "FAILED: " + msg
+                    val projectPath = projDir + "/" + projectFolder
 
-                    if (!stepResult.startsWith("FAILED")) {
+                    // Снимок ДО генерации — иначе проверка "файлы изменились" бессмысленна.
+                    val filesBefore = try {
+                        fileManager.listFiles(projectPath).associate { it.path to it.lastModified }
+                    } catch (e: Exception) { emptyMap() }
+
+                    var stepResult = "FAILED: not executed"
+                    var stepOk = false
+                    val maxAttempts = 2
+                    var attempt = 0
+                    while (attempt < maxAttempts && !stepOk) {
+                        attempt++
+                        println("🎯 CodeGenerator for step " + (stepIndex + 1) + " (attempt " + attempt + "/" + maxAttempts + ")")
+                        val (success, msg) = codeGenerator.generate(
+                            stepDescription = step.description,
+                            projectContext = "Project: " + project.name + " | Location: " + projectDirPath,
+                            existingFiles = stepQuery.toString(),
+                            projectDir = projectDirPath
+                        )
+                        stepResult = if (success) msg else "FAILED: " + msg
+                        val filesAfter = try {
+                            fileManager.listFiles(projectPath).associate { it.path to it.lastModified }
+                        } catch (e: Exception) { emptyMap() }
+                        val anyModified = filesAfter.size != filesBefore.size ||
+                            filesAfter.any { (pth, time) -> filesBefore[pth] != time }
+                        val ok = success && !stepResult.startsWith("FAILED")
+                        // Шаг 1 создаёт проект (файлов "до" нет); остальные обязаны реально писать файлы.
+                        stepOk = ok && (stepIndex == 0 || anyModified)
+                        if (!stepOk) println("⚠️ Step " + (stepIndex + 1) + ": нет изменений или ошибка (attempt " + attempt + ")")
+                    }
+
+                    if (stepOk) {
                         results.add(stepResult)
+                        projectManager.updateStep(
+                            projectId, stepIndex,
+                            ProjectManager.StepStatus.DONE, stepResult.take(500),
+                            workspaceDir = fileManager.workspaceRoot.absolutePath + "/" + projectPath
+                        )
+                        println("✅ Step " + (stepIndex + 1) + " done")
+                    } else {
                         results.add(stepResult)
-                        // Verify files were actually modified (check timestamps)
-                        val projectPath = projDir + "/" + projectFolder
-                            val filesBefore = try {
-                                fileManager.listFiles(projectPath).associate { it.path to it.lastModified }
-                            } catch (e: Exception) { emptyMap() }
-                            projectManager.updateStep(
-                                projectId, stepIndex,
-                                ProjectManager.StepStatus.DONE, stepResult.take(500),
-                                workspaceDir = fileManager.workspaceRoot.absolutePath + "/" + projectPath
-                            )
-                            val filesAfter = try { fileManager.listFiles(projectPath).associate { it.path to it.lastModified } } catch (e: Exception) { emptyMap() }
-                            val anyModified = filesAfter.any { (path, time) -> filesBefore[path] != time }
-                            if (!anyModified && stepIndex > 0) {
-                                println("⚠️ Step ${stepIndex + 1}: files NOT modified, retrying...")
-                                projectManager.updateStep(projectId, stepIndex, ProjectManager.StepStatus.FAILED, "No file changes detected")
-                                stepIndex++
-                                continue
-                            }
-                            println("✅ Step ${stepIndex + 1} done")
-                        }
+                        anyFailed = true
+                        projectManager.updateStep(projectId, stepIndex, ProjectManager.StepStatus.FAILED, stepResult.take(500))
+                        println("❌ Step " + (stepIndex + 1) + " failed — останавливаю проект")
+                    }
                     stepIndex++
+                    if (anyFailed) break
                 }  // end while
-                projectManager.completeProject(projectId)
+                if (!anyFailed) {
+                    projectManager.completeProject(projectId)
+                } else {
+                    println("⚠️ Project " + projectId + ": завершён с ошибками, completeProject пропущен")
+                }
 
                 val initiativeResp = aiRepository.sendMessage(
                     messages = listOf(Message.createUserMessage("initiative",
