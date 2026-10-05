@@ -669,7 +669,7 @@ listOf(
                             manifestJson = manifestJson.replace(Regex("\"name\"\\s*:\\s*\"[^\\\\\"]+\""), "\"name\": \"" + skillName + "\"")
                             manifestJson = manifestJson.replace(Regex("\"mainScript\"\\s*:\\s*\"[^\\\\\"]+\""), "\"mainScript\": \"" + skillName + ".py\"")
                             manifestJson = manifestJson.replace(Regex("\"type\"\\s*:\\s*\"[^\\\\\"]+\""), "\"type\": \"python\"")
-                            if (!manifestJson.contains("\"enabled\"")) manifestJson = manifestJson.trimEnd('}') + ",\"enabled\": true}"
+                            if (!manifestJson.contains("\"enabled\"")) manifestJson = manifestJson.trimEnd('}') + ",\"enabled\": false}"
                             val skillsDir = java.io.File(skillsDirectory); skillsDir.mkdirs()
                             java.io.File(skillsDir, skillName + ".json").writeText(manifestJson)
                             java.io.File(skillsDir, skillName + ".py").writeText(scriptCode)
@@ -681,13 +681,14 @@ listOf(
                                 instructions = "", endpoint = "", type = "python",
                                 mainScript = json.optString("mainScript", skillName + ".py"),
                                 triggers = json.optJSONArray("triggers")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
-                                timeout = json.optInt("timeout", 30), enabled = true
+                                timeout = json.optInt("timeout", 30), enabled = false
                             )
-                            skillRegistry.register(com.pai.android.agent.skills.ExternalSkillAdapter(manifest, skillRegistry.getSkill("python"), skillsDirectory))
-                            println("createSkill: registered")
+                            // НЕ регистрируем автоматически: навык попадёт в «Навыки» выключенным,
+                            // пока пользователь не проверит код и не включит его. Это и есть верификация пользователем.
+                            println("createSkill: skill saved DISABLED, awaiting user review: " + skillName)
                             return@withContext AgentResponse.Success(
-                                answer = "✅ Skill \"" + skillName + "\" created! Triggers: " + manifest.triggers.joinToString(", "),
-                                thoughts = listOf("local skill created"), actions = emptyList()
+                                answer = "🆕 Навык \"" + skillName + "\" создан, но ПОКА ОТКЛЮЧЁН.\nПроверьте код и включите его в разделе «Навыки».\n\nФайлы: `" + skillName + ".py`, `" + skillName + ".json`\n\nКод (первые 600 символов):\n```python\n" + scriptCode.take(600) + "\n```",
+                                thoughts = listOf("local skill created (disabled, awaiting user review)"), actions = emptyList()
                             )
                         } catch (e: Exception) {
                             println("createSkill error: " + e.message)
