@@ -1093,7 +1093,7 @@ class AiRepository @Inject constructor(
         println("⚠️ Контекст превышен! Стратегия: $strategy, нужно освободить ${totalTokens - threshold} токенов")
         
         return when (strategy) {
-            "summarize" -> summarizeContext(messages, maxContext, threshold)
+            "summarize" -> summarizeContext(messages, maxContext, threshold, settings)
             else -> truncateContext(messages, threshold) // "truncate" или любое другое
         }
     }
@@ -1148,7 +1148,8 @@ class AiRepository @Inject constructor(
     private suspend fun summarizeContext(
         messages: MutableList<com.pai.android.data.network.model.ChatMessage>,
         maxContext: Int,
-        threshold: Int
+        threshold: Int,
+        settings: ProviderSettings
     ): MutableList<com.pai.android.data.network.model.ChatMessage> {
         val systemMessages = messages.filter { it.role == "system" }
         val chatMessages = messages.filter { it.role != "system" }
@@ -1225,7 +1226,7 @@ class AiRepository @Inject constructor(
                         content = fullPrompt
                     )
                 ),
-                providerSettings = null,
+                providerSettings = settings,
                 modelOverride = null
             )
             if (response.isSuccess) response.getOrThrow().text else null
