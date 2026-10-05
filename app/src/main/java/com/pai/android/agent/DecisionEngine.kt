@@ -665,11 +665,34 @@ listOf(
                             val scriptMatch = Regex("---SCRIPT---\\s*(.+)", setOf(RegexOption.DOT_MATCHES_ALL)).find(genText)
                             if (manifestMatch == null || scriptMatch == null) throw Exception("Cannot parse LLM output")
                             var manifestJson = manifestMatch.groupValues[1]
-                            val scriptCode = scriptMatch.groupValues[1].trim()
+                            var scriptCode = scriptMatch.groupValues[1].trim()
                             manifestJson = manifestJson.replace(Regex("\"name\"\\s*:\\s*\"[^\\\\\"]+\""), "\"name\": \"" + skillName + "\"")
                             manifestJson = manifestJson.replace(Regex("\"mainScript\"\\s*:\\s*\"[^\\\\\"]+\""), "\"mainScript\": \"" + skillName + ".py\"")
                             manifestJson = manifestJson.replace(Regex("\"type\"\\s*:\\s*\"[^\\\\\"]+\""), "\"type\": \"python\"")
                             if (!manifestJson.contains("\"enabled\"")) manifestJson = manifestJson.trimEnd('}') + ",\"enabled\": false}"
+                            // ── Проверка кода на работоспособность + одна попытка авто-починки ──
+                            var verify = com.pai.android.agent.skills.PythonVerifier.checkSyntax(scriptCode)
+                            if (!verify.ok) {
+                                try {
+                                    val fixPrompt = "Исправь синтаксическую ошибку в Python-скрипте.\nОшибка: " + verify.message +
+                                        "\n\nСкрипт:\n" + scriptCode + "\n\nВерни ТОЛЬКО исправленный Python-код, без пояснений и без markdown."
+                                    val fixResp = aiRepository.sendMessage(
+                                        messages = listOf(com.pai.android.data.model.Message.createUserMessage("fix", fixPrompt)),
+                                        systemPrompt = "You fix Python syntax errors. Output ONLY the corrected code.",
+                                        memoryContext = ""
+                                    )
+                                    val fixed = fixResp.getOrNull()?.text?.trim() ?: ""
+                                    if (fixed.isNotBlank()) {
+                                        scriptCode = fixed.trim().removePrefix("```python").removePrefix("```").removeSuffix("```").trim()
+                                        verify = com.pai.android.agent.skills.PythonVerifier.checkSyntax(scriptCode)
+                                        println("createSkill: auto-fix -> " + verify.ok)
+                                    }
+                                } catch (e: Exception) {
+                                    println("createSkill: auto-fix failed: " + e.message)
+                                }
+                            }
+                            val smoke = if (verify.ok) com.pai.android.agent.skills.PythonVerifier.smokeRun(scriptCode, "") else null
+                            println("createSkill: verify=" + com.pai.android.agent.skills.PythonVerifier.describe(verify) + (if (smoke != null) " | smoke=" + com.pai.android.agent.skills.PythonVerifier.describe(smoke) else ""))
                             val skillsDir = java.io.File(skillsDirectory); skillsDir.mkdirs()
                             java.io.File(skillsDir, skillName + ".json").writeText(manifestJson)
                             java.io.File(skillsDir, skillName + ".py").writeText(scriptCode)
@@ -687,7 +710,7 @@ listOf(
                             // пока пользователь не проверит код и не включит его. Это и есть верификация пользователем.
                             println("createSkill: skill saved DISABLED, awaiting user review: " + skillName)
                             return@withContext AgentResponse.Success(
-                                answer = "🆕 Навык \"" + skillName + "\" создан, но ПОКА ОТКЛЮЧЁН.\nПроверьте код и включите его в разделе «Навыки».\n\nФайлы: `" + skillName + ".py`, `" + skillName + ".json`\n\nКод (первые 600 символов):\n```python\n" + scriptCode.take(600) + "\n```",
+                                answer = "🆕 Навык \"" + skillName + "\" создан, но ПОКА ОТКЛЮЧЁН. Проверьте код и включите его в разделе «Навыки».\n\nПроверка: " + com.pai.android.agent.skills.PythonVerifier.describe(verify) + (if (smoke != null) ", " + com.pai.android.agent.skills.PythonVerifier.describe(smoke) else "") + "\n\nФайлы: `" + skillName + ".py`, `" + skillName + ".json`\n\nКод (первые 600 символов):\n```python\n" + scriptCode.take(600) + "\n```",
                                 thoughts = listOf("local skill created (disabled, awaiting user review)"), actions = emptyList()
                             )
                         } catch (e: Exception) {
