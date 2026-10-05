@@ -33,6 +33,11 @@ class OpenFileSkill(
 
             println("📂 OpenFileSkill: открываю файл '$path'")
 
+            // Host/absolute-пути (C:\..., /Users/..., /home/...) на Android бессмысленны — работаем по имени файла.
+            if (path.contains(':') || path.startsWith("/Users/") || path.startsWith("/home/")) {
+                println("📂 OpenFileSkill: '$path' — это host-путь, работаю по имени файла")
+            }
+
             var fileInfo = fileManager.getFileInfo(path)
             
             // Если файл не найден по точному пути — ищем рекурсивно по имени
