@@ -37,8 +37,7 @@ class SmartSummarizer @Inject constructor(
             // Отправляем запрос к AI
             val result = aiRepository.sendMessage(
                 messages = listOf(Message.createUserMessage("summarization", prompt)),
-                systemPrompt = SYSTEM_PROMPT,
-                modelOverride = "gpt-3.5-turbo"  // Используем более дешёвую модель для суммаризации
+                systemPrompt = SYSTEM_PROMPT
             )
             
             if (result.isSuccess) {
@@ -74,8 +73,7 @@ class SmartSummarizer @Inject constructor(
             
             val result = aiRepository.sendMessage(
                 messages = listOf(Message.createUserMessage("summarization", prompt)),
-                systemPrompt = SYSTEM_PROMPT,
-                modelOverride = "gpt-3.5-turbo"
+                systemPrompt = SYSTEM_PROMPT
             )
             
             if (result.isSuccess) {
