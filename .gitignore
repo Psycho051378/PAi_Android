@@ -47,6 +47,7 @@ Thumbs.db
 *.log
 *.txt
 *.html
+!docs/*.html
 memory/
 log.txt
 temp_log.txt
@@ -55,7 +56,7 @@ tmp_log.txt
 # APK builds — too large for GitHub, serve via releases
 apk/
 
-# Local plans / drafts
-docs/
+# Local plans / drafts (not published)
+plans/
 PLAN_LOCAL_MODELS.md
 

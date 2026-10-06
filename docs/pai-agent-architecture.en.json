@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PAi Android — AI Assistant Architecture",
+    "output": "docs/pai-agent-architecture.en.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Psycho051378/PAi_Android",
+      "revision": "3b21f0e872f63892a1e2a7a22411669e3e11be8d",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "User",
+      "sublabel": "text or voice",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Compose UI",
+      "sublabel": "chat and screens",
+      "pos": [
+        230,
+        300
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/MainActivity.kt",
+          "line": 32
+        },
+        {
+          "path": "app/src/main/java/com/pai/android/ui/screens/ChatDetailScreen.kt",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "id": "vm",
+      "type": "frontend",
+      "label": "ViewModel",
+      "sublabel": "chat state",
+      "pos": [
+        430,
+        300
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/presentation/chat/ChatDetailViewModel.kt",
+          "line": 93
+        }
+      ]
+    },
+    {
+      "id": "repo",
+      "type": "backend",
+      "label": "AiRepository",
+      "sublabel": "send · context window",
+      "pos": [
+        680,
+        300
+      ],
+      "size": [
+        165,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/repository/AiRepository.kt",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "cloud",
+      "label": "LLM Providers",
+      "sublabel": "DeepSeek · OpenAI · OpenRouter",
+      "pos": [
+        680,
+        140
+      ],
+      "size": [
+        180,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/model/ProviderSettings.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "localai",
+      "type": "cloud",
+      "label": "Local Models",
+      "sublabel": "LiteRT (Gemma / Qwen)",
+      "pos": [
+        680,
+        460
+      ],
+      "size": [
+        170,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/LocalAiInteraction.kt",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "id": "room",
+      "type": "database",
+      "label": "Room (DB)",
+      "sublabel": "messages · memory",
+      "pos": [
+        430,
+        460
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "core",
+      "type": "backend",
+      "label": "Agent Core",
+      "sublabel": "DecisionEngine",
+      "pos": [
+        950,
+        300
+      ],
+      "size": [
+        165,
+        64
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/DecisionEngine.kt",
+          "line": 352
+        }
+      ]
+    },
+    {
+      "id": "planner",
+      "type": "backend",
+      "label": "Planner",
+      "sublabel": "AgentPlanner · PlanningAgent",
+      "pos": [
+        1130,
+        140
+      ],
+      "size": [
+        170,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/AgentPlanner.kt",
+          "line": 37
+        },
+        {
+          "path": "app/src/main/java/com/pai/android/agent/PlanningAgent.kt",
+          "line": 64
+        }
+      ]
+    },
+    {
+      "id": "react",
+      "type": "backend",
+      "label": "ReAct Loop",
+      "sublabel": "agent steps",
+      "pos": [
+        1130,
+        260
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/ReActAgent.kt",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "id": "taskqueue",
+      "type": "backend",
+      "label": "Task Runner",
+      "sublabel": "TaskQueue · ProjectStore",
+      "pos": [
+        1130,
+        380
+      ],
+      "size": [
+        165,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/TaskQueue.kt",
+          "line": 17
+        },
+        {
+          "path": "app/src/main/java/com/pai/android/agent/ProjectStore.kt",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "id": "codegen",
+      "type": "backend",
+      "label": "Code Generator",
+      "sublabel": "CodeGenerator",
+      "pos": [
+        1130,
+        500
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/CodeGenerator.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "type": "backend",
+      "label": "Skills & Tools",
+      "sublabel": "SkillRegistry · tools",
+      "pos": [
+        1350,
+        140
+      ],
+      "size": [
+        175,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/Skill.kt",
+          "line": 99
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "type": "backend",
+      "label": "Python (Chaquopy)",
+      "sublabel": "PythonSkill",
+      "pos": [
+        1350,
+        260
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/skills/PythonSkill.kt",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "type": "security",
+      "label": "Code Verification",
+      "sublabel": "syntax · smoke · HTML/JS",
+      "pos": [
+        1350,
+        380
+      ],
+      "size": [
+        175,
+        64
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/skills/PythonVerifier.kt",
+          "line": 13
+        },
+        {
+          "path": "app/src/main/java/com/pai/android/agent/WebAssetVerifier.kt",
+          "line": 7
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "Workspace Files",
+      "sublabel": "FileManager · safe paths",
+      "pos": [
+        1350,
+        500
+      ],
+      "size": [
+        175,
+        60
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/FileManager.kt",
+          "line": 19
+        },
+        {
+          "path": "app/src/main/java/com/pai/android/agent/WorkspacePaths.kt",
+          "line": 9
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Client",
+      "wraps": [
+        "ui",
+        "vm"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Data & Models",
+      "wraps": [
+        "repo",
+        "providers",
+        "localai",
+        "room"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Agent Core",
+      "wraps": [
+        "core",
+        "planner",
+        "react",
+        "taskqueue",
+        "codegen"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Extensions & Control",
+      "wraps": [
+        "skills",
+        "python",
+        "verify",
+        "files"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "u-ui",
+      "from": "user",
+      "to": "ui"
+    },
+    {
+      "id": "ui-vm",
+      "from": "ui",
+      "to": "vm"
+    },
+    {
+      "id": "vm-repo",
+      "from": "vm",
+      "to": "repo",
+      "label": "sendMessage"
+    },
+    {
+      "id": "repo-prov",
+      "from": "repo",
+      "to": "providers",
+      "label": "LLM request"
+    },
+    {
+      "id": "repo-local",
+      "from": "repo",
+      "to": "localai",
+      "label": "local"
+    },
+    {
+      "id": "vm-room",
+      "from": "vm",
+      "to": "room",
+      "label": "history"
+    },
+    {
+      "id": "repo-core",
+      "from": "repo",
+      "to": "core",
+      "label": "processQuery"
+    },
+    {
+      "id": "core-planner",
+      "from": "core",
+      "to": "planner"
+    },
+    {
+      "id": "core-react",
+      "from": "core",
+      "to": "react"
+    },
+    {
+      "id": "core-task",
+      "from": "core",
+      "to": "taskqueue"
+    },
+    {
+      "id": "task-codegen",
+      "from": "taskqueue",
+      "to": "codegen"
+    },
+    {
+      "id": "react-skills",
+      "from": "react",
+      "to": "skills"
+    },
+    {
+      "id": "codegen-python",
+      "from": "codegen",
+      "to": "python"
+    },
+    {
+      "id": "codegen-verify",
+      "from": "codegen",
+      "to": "verify"
+    },
+    {
+      "id": "python-files",
+      "from": "python",
+      "to": "files"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Layers",
+      "items": [
+        "Compose UI → ViewModel → AiRepository",
+        "Agent core is UI-independent"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Agent",
+      "items": [
+        "DecisionEngine picks: plan / ReAct / task",
+        "Code generation and Python execution"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Control",
+      "items": [
+        "Generated code is verified before execution",
+        "Paths stay inside the workspace"
+      ]
+    }
+  ]
+}
