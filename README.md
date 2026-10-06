@@ -207,6 +207,19 @@ com.pai.android/
 
 ---
 
+### 📐 Diagrams
+
+Self-contained interactive diagrams — open the HTML in any browser and switch RU/EN in the top-right toolbar.
+
+| Diagram | RU | EN |
+|---------|----|----|
+| Agent architecture | [RU](docs/pai-agent-architecture.ru.html) | [EN](docs/pai-agent-architecture.en.html) |
+| Agent task lifecycle | [RU](docs/pai-agent-workflow.ru.html) | [EN](docs/pai-agent-workflow.en.html) |
+
+![Agent architecture](docs/pai-agent-architecture.en.png)
+
+![Agent task lifecycle](docs/pai-agent-workflow.en.png)
+
 ## 🧪 Tech Stack
 
 | Layer | Technology |
