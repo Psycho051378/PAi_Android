@@ -1,0 +1,409 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "PAi Android — Agent Task Lifecycle",
+    "output": "docs/pai-agent-workflow.en.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Psycho051378/PAi_Android",
+      "revision": "3b21f0e872f63892a1e2a7a22411669e3e11be8d",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "lanes": [
+    {
+      "id": "client",
+      "label": "Клиент"
+    },
+    {
+      "id": "core",
+      "label": "Core: repository and decision"
+    },
+    {
+      "id": "model",
+      "label": "Models",
+      "variant": "exception"
+    },
+    {
+      "id": "exec",
+      "label": "Agent execution"
+    },
+    {
+      "id": "skills",
+      "label": "Skills and Python"
+    },
+    {
+      "id": "out",
+      "label": "Answer"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "Intake",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "route",
+      "label": "Routing",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "process",
+      "label": "Processing",
+      "fromCol": 3,
+      "toCol": 4
+    },
+    {
+      "id": "reply",
+      "label": "Answer",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "user",
+    "ui",
+    "vm",
+    "repo",
+    "de",
+    "react",
+    "answer"
+  ],
+  "nodes": [
+    {
+      "id": "user",
+      "lane": "client",
+      "col": 0,
+      "type": "external",
+      "label": "User",
+      "sublabel": "text or voice",
+      "width": 132
+    },
+    {
+      "id": "ui",
+      "lane": "client",
+      "col": 1,
+      "type": "frontend",
+      "label": "Compose UI",
+      "sublabel": "chat and screens",
+      "width": 132,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/MainActivity.kt",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "id": "vm",
+      "lane": "client",
+      "col": 2,
+      "type": "frontend",
+      "label": "ViewModel",
+      "sublabel": "ChatDetailViewModel",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/presentation/chat/ChatDetailViewModel.kt",
+          "line": 340
+        }
+      ]
+    },
+    {
+      "id": "repo",
+      "lane": "core",
+      "col": 2,
+      "type": "backend",
+      "label": "AiRepository",
+      "sublabel": "context window",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/repository/AiRepository.kt",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "id": "de",
+      "lane": "core",
+      "col": 3,
+      "type": "backend",
+      "label": "DecisionEngine",
+      "sublabel": "skill · plan · ReAct",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/DecisionEngine.kt",
+          "line": 352
+        }
+      ]
+    },
+    {
+      "id": "net",
+      "lane": "model",
+      "col": 3,
+      "type": "cloud",
+      "label": "Network provider",
+      "sublabel": "DeepSeek · OpenAI",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/model/ProviderSettings.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "planner",
+      "lane": "exec",
+      "col": 4,
+      "type": "backend",
+      "label": "Planner",
+      "sublabel": "query · AgentPlanner",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/AgentPlanner.kt",
+          "line": 37
+        }
+      ],
+      "yOffset": -140
+    },
+    {
+      "id": "taskq",
+      "lane": "exec",
+      "col": 4,
+      "yOffset": 96,
+      "type": "backend",
+      "label": "TaskQueue",
+      "sublabel": "project · steps",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/TaskQueue.kt",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "react",
+      "lane": "exec",
+      "col": 5,
+      "type": "backend",
+      "label": "ReAct loop",
+      "sublabel": "agent steps",
+      "width": 124,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/ReActAgent.kt",
+          "line": 25
+        }
+      ],
+      "yOffset": -140
+    },
+    {
+      "id": "codegen",
+      "lane": "exec",
+      "col": 5,
+      "yOffset": 96,
+      "type": "backend",
+      "label": "CodeGenerator",
+      "sublabel": "files and exec",
+      "width": 124,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/CodeGenerator.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "lane": "skills",
+      "col": 3,
+      "type": "backend",
+      "label": "Skills & Tools",
+      "sublabel": "SkillRegistry · tools",
+      "width": 150,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/Skill.kt",
+          "line": 99
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "lane": "skills",
+      "col": 4,
+      "type": "backend",
+      "label": "Python (Chaquopy)",
+      "sublabel": "PythonSkill",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/skills/PythonSkill.kt",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "lane": "skills",
+      "col": 5,
+      "type": "database",
+      "label": "Workspace files",
+      "sublabel": "verify and write",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/FileManager.kt",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "id": "answer",
+      "lane": "out",
+      "col": 5,
+      "type": "backend",
+      "label": "Answer to user",
+      "sublabel": "text or file",
+      "width": 140
+    }
+  ],
+  "edges": [
+    {
+      "id": "u-ui",
+      "from": "user",
+      "to": "ui"
+    },
+    {
+      "id": "ui-vm",
+      "from": "ui",
+      "to": "vm"
+    },
+    {
+      "id": "vm-repo",
+      "from": "vm",
+      "to": "repo",
+      "label": "sendMessage"
+    },
+    {
+      "id": "repo-de",
+      "from": "repo",
+      "to": "de",
+      "label": "processQuery"
+    },
+    {
+      "id": "repo-net",
+      "from": "repo",
+      "to": "net",
+      "label": "LLM"
+    },
+    {
+      "id": "de-planner",
+      "from": "de",
+      "to": "planner",
+      "label": "plan",
+      "role": "branch"
+    },
+    {
+      "id": "de-taskq",
+      "from": "de",
+      "to": "taskq",
+      "label": "project",
+      "role": "branch"
+    },
+    {
+      "id": "de-react",
+      "from": "de",
+      "to": "react",
+      "label": "steps",
+      "role": "branch"
+    },
+    {
+      "id": "de-skills",
+      "from": "de",
+      "to": "skills",
+      "label": "skill",
+      "role": "branch"
+    },
+    {
+      "id": "taskq-codegen",
+      "from": "taskq",
+      "to": "codegen"
+    },
+    {
+      "id": "codegen-files",
+      "from": "codegen",
+      "to": "files",
+      "label": "write"
+    },
+    {
+      "id": "skills-python",
+      "from": "skills",
+      "to": "python"
+    },
+    {
+      "id": "python-files",
+      "from": "python",
+      "to": "files"
+    },
+    {
+      "id": "react-answer",
+      "from": "react",
+      "to": "answer",
+      "label": "answer"
+    },
+    {
+      "id": "files-answer",
+      "from": "files",
+      "to": "answer",
+      "label": "file answer"
+    },
+    {
+      "id": "planner-react",
+      "from": "planner",
+      "to": "react",
+      "label": "plan >2 steps",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Decision",
+      "items": [
+        "DecisionEngine picks: skill / plan / ReAct",
+        "AiRepository handles context window and provider",
+        "Query planner (AgentPlanner) builds the step plan and calls the LLM itself",
+        "Plans with more than 2 steps are delegated to the ReAct loop"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Execution",
+      "items": [
+        "TaskQueue runs the project step by step",
+        "CodeGenerator writes files and runs Python"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Control",
+      "items": [
+        "Generated code is verified before running",
+        "Paths never leave the workspace"
+      ]
+    }
+  ]
+}
