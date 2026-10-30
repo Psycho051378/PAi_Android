@@ -60,3 +60,6 @@ apk/
 plans/
 PLAN_LOCAL_MODELS.md
 
+
+# Local network baseline (artifact)
+baseline.json
