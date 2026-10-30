@@ -293,7 +293,9 @@ fun RouterSettingsScreen(
             // Кнопка сохранения
             Button(
                 onClick = { viewModel.save() },
-                enabled = fieldsEnabled && !state.loading,
+                // Сохранять можно всегда: иначе выключенный роутер (fieldsEnabled = false)
+                // невозможно сохранить — кнопка блокировалась
+                enabled = !state.loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),

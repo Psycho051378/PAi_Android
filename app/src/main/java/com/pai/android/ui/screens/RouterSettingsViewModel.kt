@@ -81,9 +81,18 @@ class RouterSettingsViewModel @Inject constructor(
         }
     }
 
-    /** Переключает enabled (использовать роутер). */
+    /**
+     * Переключает enabled (использовать роутер) и СРАЗУ сохраняет.
+     *
+     * Раньше переключение меняло только UI: чтобы сохранить, нужно было нажать
+     * «Сохранить», а кнопка была неактивна при выключенном чекбоксе
+     * (enabled = fieldsEnabled). В итоге выключить роутер было невозможно —
+     * при перезаходе настройка возвращалась из prefs.
+     */
     fun toggleEnabled() {
-        _uiState.update { it.copy(enabled = !it.enabled) }
+        val updated = _uiState.value.copy(enabled = !_uiState.value.enabled)
+        _uiState.update { updated }
+        persist(updated)
     }
 
     /** Обновляет IP адрес роутера. */
@@ -161,27 +170,33 @@ class RouterSettingsViewModel @Inject constructor(
 
     /** Сохраняет настройки роутера в HomeSkill. */
     fun save() {
-        val state = _uiState.value
-        if (state.loading) return
+        if (_uiState.value.loading) return
+        persist(_uiState.value)
+    }
 
-        viewModelScope.launch {
-            try {
-                val config = RouterConfigData(
-                    enabled = state.enabled,
-                    ip = state.ip,
-                    port = state.port.toIntOrNull() ?: 80,
-                    username = state.username,
-                    password = state.password,
-                    community = state.community,
-                    protocol = state.protocol.name
-                )
+    /**
+     * Единая точка записи конфигурации (prefs). Вызывается и из toggle, и из кнопки.
+     *
+     * Пишем синхронно: prefs.edit().apply() не блокирует, а корутина могла бы
+     * не успеть выполниться, если пользователь сразу уходит с экрана.
+     */
+    private fun persist(state: RouterSettingsUiState) {
+        try {
+            val config = RouterConfigData(
+                enabled = state.enabled,
+                ip = state.ip,
+                port = state.port.toIntOrNull() ?: 80,
+                username = state.username,
+                password = state.password,
+                community = state.community,
+                protocol = state.protocol.name
+            )
 
-                homeSkill.saveRouterConfig(config)
-                _uiState.update { it.copy(saved = true, error = null) }
-                println("RouterSettingsVM: config saved")
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Ошибка сохранения: ${e.message}") }
-            }
+            homeSkill.saveRouterConfig(config)
+            _uiState.update { it.copy(saved = true, error = null) }
+            println("RouterSettingsVM: config saved (enabled=${state.enabled})")
+        } catch (e: Exception) {
+            _uiState.update { it.copy(error = "Ошибка сохранения: ${e.message}") }
         }
     }
 
