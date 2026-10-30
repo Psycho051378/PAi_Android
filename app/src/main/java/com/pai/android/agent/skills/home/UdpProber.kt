@@ -28,18 +28,30 @@ object UdpProber {
         val mac: String? = null
     )
 
-    fun probeAll(ips: Collection<String>): Map<String, ProbeResult> {
+    /**
+     * @param includeWiz false, если WiZ уже опрошен слоем идентичности
+     *        (IdentityRegistry даёт MAC + состояние одним пакетом, здесь — только MAC)
+     * @param includeYeelight false, если Yeelight уже опрошен через SSDP/55443
+     */
+    fun probeAll(
+        ips: Collection<String>,
+        includeWiz: Boolean = true,
+        includeYeelight: Boolean = true,
+        network: android.net.Network? = null
+    ): Map<String, ProbeResult> {
         val results = mutableMapOf<String, ProbeResult>()
 
         // 1. WiZ broadcast (UDP 38899)
-        val wizDevices = discoverWizBroadcast()
-        for ((ip, pr) in wizDevices) {
-            results[ip] = pr
-            Log.d(TAG, "WiZ found: $ip mac=${pr.mac}")
+        if (includeWiz) {
+            val wizDevices = discoverWizBroadcast(network)
+            for ((ip, pr) in wizDevices) {
+                results[ip] = pr
+                Log.d(TAG, "WiZ found: $ip mac=${pr.mac}")
+            }
         }
 
         // 2. MiIO broadcast (UDP 54321) — Xiaomi умный дом
-        val miioDevices = discoverMiioBroadcast()
+        val miioDevices = discoverMiioBroadcast(network)
         for ((ip, pr) in miioDevices) {
             if (ip !in results) {
                 results[ip] = pr
@@ -47,12 +59,14 @@ object UdpProber {
             }
         }
 
-        // 3. Yeelight multicast (UDP 4321)
-        val yeelightDevices = discoverYeelightMulticast()
-        for ((ip, pr) in yeelightDevices) {
-            if (ip !in results) {
-                results[ip] = pr
-                Log.d(TAG, "Yeelight found: $ip mac=${pr.mac}")
+        // 3. Yeelight SSDP (UDP 1982) — порт исправлен с 4321
+        if (includeYeelight) {
+            val yeelightDevices = discoverYeelightMulticast(network)
+            for ((ip, pr) in yeelightDevices) {
+                if (ip !in results) {
+                    results[ip] = pr
+                    Log.d(TAG, "Yeelight found: $ip mac=${pr.mac}")
+                }
             }
         }
 
@@ -71,10 +85,11 @@ object UdpProber {
      * WiZ broadcast discovery на порт 38899.
      * Все WiZ лампы в сети отвечают на один broadcast.
      */
-    private fun discoverWizBroadcast(): Map<String, ProbeResult> {
+    private fun discoverWizBroadcast(network: android.net.Network? = null): Map<String, ProbeResult> {
         val result = mutableMapOf<String, ProbeResult>()
         try {
             val socket = DatagramSocket()
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
             socket.broadcast = true
             socket.soTimeout = 1500
 
@@ -124,16 +139,27 @@ object UdpProber {
      * Типичный ответ от Roborock/Xiaomi увлажнителя:
      * {"result":{"life":1234,"mac":"aa:bb:cc:dd:ee:ff","model":"roborock.vacuum.s5e","fw_ver":"3.5.8","ip":"192.168.0.50"}}
      */
-    private fun discoverMiioBroadcast(): Map<String, ProbeResult> {
+    private fun discoverMiioBroadcast(network: android.net.Network? = null): Map<String, ProbeResult> {
         val result = mutableMapOf<String, ProbeResult>()
         try {
             val socket = DatagramSocket()
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
             socket.broadcast = true
             socket.soTimeout = 2000
 
-            // MiIO hello пакет: {"id":1,"method":"_sync.get_sysinfo"}
-            val helloJson = """{"id":$SYSTEM_OFFSET_ID,"method":"_sync.get_sysinfo"}""".trimIndent()
-            val data = helloJson.toByteArray(Charsets.UTF_8)
+            // MiIO handshake — БИНАРНЫЙ пакет, а не JSON.
+            // 32 байта: magic 21 31 00 20 + 28 байт 0xFF.
+            // JSON-запрос ("_sync.get_sysinfo") устройства игнорируют.
+            val data = byteArrayOf(
+                0x21, 0x31, 0x00, 0x20,
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
+                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()
+            )
             socket.send(DatagramPacket(data, data.size, InetAddress.getByName("255.255.255.255"), 54321))
 
             val buf = ByteArray(2048)
@@ -142,8 +168,12 @@ object UdpProber {
                 try {
                     val packet = DatagramPacket(buf, buf.size)
                     socket.receive(packet)
-                    val response = String(packet.data, 0, packet.length, Charsets.UTF_8)
-                    val ip = packet.address.hostAddress ?: ""
+                    // Ответ = 32-байтный handshake-заголовок + JSON.
+                    // Отрезаем заголовок: ищем первую '{'.
+                    val raw = String(packet.data, 0, packet.length, Charsets.UTF_8)
+                    val jsonStart = raw.indexOf('{')
+                    val response = if (jsonStart >= 0) raw.substring(jsonStart) else raw
+                    val ip = packet.address?.hostAddress ?: ""
                     Log.d(TAG, "MiIO response from $ip: ${response.take(300)}")
 
                     val parsed = parseMiioResponse(response)
@@ -231,11 +261,12 @@ object UdpProber {
      * Yeelight не отдают MAC в самом M-SEARCH ответе, поэтому после получения Location
      * делаем HTTP GET по Location и парсим MAC из XML или JSON описания.
      */
-    private fun discoverYeelightMulticast(): Map<String, ProbeResult> {
+    private fun discoverYeelightMulticast(network: android.net.Network? = null): Map<String, ProbeResult> {
         val result = mutableMapOf<String, ProbeResult>()
         val socket = DatagramSocket()
 
         try {
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
             socket.broadcast = true
             socket.soTimeout = 1500
 
@@ -247,7 +278,8 @@ object UdpProber {
                 "\r\n"
             ).toByteArray(Charsets.UTF_8)
 
-            socket.send(DatagramPacket(searchMsg, searchMsg.size, InetAddress.getByName("239.255.255.250"), 4321))
+            // Yeelight слушает SSDP на порту 1982 (не 4321!)
+            socket.send(DatagramPacket(searchMsg, searchMsg.size, InetAddress.getByName("239.255.255.250"), 1982))
 
             val buf = ByteArray(2048)
             val endTime = System.currentTimeMillis() + 3000
@@ -326,10 +358,11 @@ object UdpProber {
      * Последние 6 байт ответа = MAC-адрес устройства.
      * Работает для Windows, Samba, некоторых ТВ и Linux.
      */
-    fun discoverNetbios(ip: String): String? {
+    fun discoverNetbios(ip: String, timeoutMs: Int = 1500, network: android.net.Network? = null): String? {
         return try {
             val socket = DatagramSocket()
-            socket.soTimeout = 1500
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
+            socket.soTimeout = timeoutMs
 
             // NetBIOS Node Status Request (RFC 1002)
             val request = byteArrayOf(

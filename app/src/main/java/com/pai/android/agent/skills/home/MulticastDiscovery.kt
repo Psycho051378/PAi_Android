@@ -72,14 +72,17 @@ object MulticastDiscovery {
      * @param timeoutMs общий таймаут ожидания ответов
      * @return список обнаруженных устройств
      */
-    fun discover(timeoutMs: Long = TIMEOUT_MS): List<DiscoveredDevice> {
+    fun discover(
+        timeoutMs: Long = TIMEOUT_MS,
+        network: android.net.Network? = null
+    ): List<DiscoveredDevice> {
         val results = mutableMapOf<String, DiscoveredDevice>()  // key = IP
         val threads = mutableListOf<Thread>()
 
         // mDNS
         threads.add(Thread {
             try {
-                val mdnsDevices = discoverMdns(timeoutMs)
+                val mdnsDevices = discoverMdns(timeoutMs, network)
                 synchronized(results) {
                     for (d in mdnsDevices) {
                         // Если IP уже есть — заменяем только если новое лучше (есть serviceType)
@@ -97,7 +100,7 @@ object MulticastDiscovery {
         // SSDP
         threads.add(Thread {
             try {
-                val ssdpDevices = discoverSsdp(timeoutMs)
+                val ssdpDevices = discoverSsdp(timeoutMs, network)
                 synchronized(results) {
                     for (d in ssdpDevices) {
                         // Если IP уже есть — заменяем только если новое лучше (есть serviceType)
@@ -123,11 +126,13 @@ object MulticastDiscovery {
      * mDNS discovery: отправляет PTR запрос _services._dns-sd._udp.local
      * и слушает ответы от всех mDNS-совместимых устройств.
      */
-    private fun discoverMdns(timeoutMs: Long): List<DiscoveredDevice> {
+    private fun discoverMdns(timeoutMs: Long, network: android.net.Network? = null): List<DiscoveredDevice> {
         val result = mutableListOf<DiscoveredDevice>()
         val socket = DatagramSocket(null)
-        
+
         try {
+            // Привязка к Wi-Fi: иначе multicast уходит в VPN-туннель
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
             socket.broadcast = true
             socket.reuseAddress = true
             socket.soTimeout = timeoutMs.toInt()
@@ -136,10 +141,12 @@ object MulticastDiscovery {
             // Присоединяемся к mDNS multicast группе на wlan0
             val wifiIface = findWifiInterface()
             if (wifiIface != null) {
-                val mcastAddr = InetAddress.getByName(MDNS_ADDR)
-                val membership = java.net.MulticastSocket(
-                    InetSocketAddress(mcastAddr, MDNS_PORT)
-                ).apply {
+                // Создаём НЕсвязанный сокет: Network.bindSocket() работает только
+                // до bind(). Иначе при VPN multicast уходит в туннель.
+                val membership = java.net.MulticastSocket(null as java.net.SocketAddress?).apply {
+                    try { network?.bindSocket(this) } catch (_: Exception) { }
+                    reuseAddress = true
+                    bind(InetSocketAddress(MDNS_PORT))
                     setInterface(wifiIface)
                     joinGroup(InetAddress.getByName(MDNS_ADDR))
                     soTimeout = timeoutMs.toInt()
@@ -193,11 +200,12 @@ object MulticastDiscovery {
      * SSDP discovery: отправляет M-SEARCH запрос
      * и слушает ответы от всех UPnP устройств.
      */
-    private fun discoverSsdp(timeoutMs: Long): List<DiscoveredDevice> {
+    private fun discoverSsdp(timeoutMs: Long, network: android.net.Network? = null): List<DiscoveredDevice> {
         val result = mutableListOf<DiscoveredDevice>()
         val socket = DatagramSocket()
-        
+
         try {
+            try { network?.bindSocket(socket) } catch (_: Exception) { }
             socket.broadcast = true
             socket.soTimeout = timeoutMs.toInt()
             
