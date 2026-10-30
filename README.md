@@ -216,10 +216,6 @@ Self-contained interactive diagrams — open the HTML in any browser and switch 
 | Agent architecture | [RU](https://psycho051378.github.io/PAi_Android/pai-agent-architecture.ru.html) | [EN](https://psycho051378.github.io/PAi_Android/pai-agent-architecture.en.html) |
 | Agent task lifecycle | [RU](https://psycho051378.github.io/PAi_Android/pai-agent-workflow.ru.html) | [EN](https://psycho051378.github.io/PAi_Android/pai-agent-workflow.en.html) |
 
-[![Agent architecture — open the interactive diagram](docs/pai-agent-architecture.en.png)](https://psycho051378.github.io/PAi_Android/pai-agent-architecture.en.html)
-
-[![Agent task lifecycle — open the interactive diagram](docs/pai-agent-workflow.en.png)](https://psycho051378.github.io/PAi_Android/pai-agent-workflow.en.html)
-
 ## 🧪 Tech Stack
 
 | Layer | Technology |

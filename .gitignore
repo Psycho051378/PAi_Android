@@ -66,3 +66,8 @@ baseline.json
 
 # Local test probe (kept on disk, never committed)
 /tools/
+
+# Local service material (never published)
+/docs/
+/smart_home_test_server.py
+/CHANGES_*.md
