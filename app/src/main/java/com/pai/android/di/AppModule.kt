@@ -1120,12 +1120,26 @@ object AppModule {
         smartHomeRepository: SmartHomeRepository,
         smartHomeDispatcher: SmartHomeDispatcher,
         blindDispatcher: BlindDispatcher,
+        identityRegistry: com.pai.android.agent.skills.home.identity.IdentityRegistry,
+        lanNetwork: com.pai.android.agent.skills.home.net.LanNetwork,
         aiRepository: AiRepository,
         okHttpClient: OkHttpClient,
         routerScanner: RouterScanner,
         routerScannerPython: RouterScannerPython
     ): HomeSkill {
-        return HomeSkill(context, memoryRepository, smartHomeRepository, smartHomeDispatcher, blindDispatcher, aiRepository, okHttpClient, routerScanner, routerScannerPython)
+        return HomeSkill(
+            context = context,
+            memoryRepository = memoryRepository,
+            smartHomeRepository = smartHomeRepository,
+            smartHomeDispatcher = smartHomeDispatcher,
+            blindDispatcher = blindDispatcher,
+            identityRegistry = identityRegistry,
+            lanNetwork = lanNetwork,
+            aiRepository = aiRepository,
+            okHttpClient = okHttpClient,
+            routerScanner = routerScanner,
+            routerScannerPython = routerScannerPython
+        )
     }
 
     @Provides
