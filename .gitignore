@@ -63,3 +63,6 @@ PLAN_LOCAL_MODELS.md
 
 # Local network baseline (artifact)
 baseline.json
+
+# Local test probe (kept on disk, never committed)
+/tools/
