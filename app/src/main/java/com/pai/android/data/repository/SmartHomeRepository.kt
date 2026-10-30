@@ -109,6 +109,21 @@ class SmartHomeRepository @Inject constructor(
         // Пользователь может удалить их через интерфейс.
     }
 
+    /**
+     * Сохранить устройства, найденные вне полного сканирования
+     * (быстрая идентификация перед управлением).
+     *
+     * В отличие от [updateFromScan] НЕ помечает остальные устройства отсутствующими:
+     * это точечное обновление, а не снимок сети.
+     */
+    suspend fun saveDiscovered(devices: List<SmartHomeDevice>) {
+        if (devices.isEmpty()) return
+        for (device in devices) {
+            dao.upsertDevice(device)
+        }
+        println("🔍 saveDiscovered: сохранено ${devices.size} устройств")
+    }
+
     suspend fun getDeviceById(deviceId: String): SmartHomeDevice? {
         return dao.getDeviceById(deviceId)
     }

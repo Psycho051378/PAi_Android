@@ -107,8 +107,8 @@ interface SmartHomeDao {
     @Query("SELECT * FROM smart_home_devices WHERE id = :deviceId")
     suspend fun getDeviceById(deviceId: String): SmartHomeDevice?
 
-    /** Получить устройство по MAC. */
-    @Query("SELECT * FROM smart_home_devices WHERE mac = :mac")
+    /** Получить устройство по MAC (или по идентичности протокола) без учёта регистра. */
+    @Query("SELECT * FROM smart_home_devices WHERE mac = :mac COLLATE NOCASE")
     suspend fun getDeviceByMac(mac: String): SmartHomeDevice?
 
     /** Все устройства в сети (наблюдение). */
