@@ -1,6 +1,11 @@
 package com.pai.android.agent.skills.home.device
 
 import com.pai.android.data.repository.SmartHomeRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 import org.json.JSONArray
 import javax.inject.Inject
@@ -22,6 +27,18 @@ class SmartHomeDispatcher @Inject constructor(
     private val router: DeviceControllerRouter
 ) {
 
+    companion object {
+        /** Пауза между командой и перечитыванием состояния. */
+        private const val VERIFY_DELAY_MS = 400L
+
+        /** Действия, после которых имеет смысл проверять состояние. */
+        private val WRITE_ACTIONS = setOf(
+            "turn_on", "turn_off", "start", "stop",
+            "set_brightness", "set_color_temp", "set_rgb",
+            "set_mode", "set_fan_speed", "charge"
+        )
+    }
+
     /**
      * Выполнить команды управления от LLM.
      * Предпочтительный метод — LLM сада разобрала запрос в структурированные команды.
@@ -34,42 +51,69 @@ class SmartHomeDispatcher @Inject constructor(
             return "❌ LLM не сгенерировала команд для выполнения."
         }
 
-        val results = mutableListOf<String>()
+        // Команды независимы — выполняем параллельно, порядок ответов сохраняем.
+        return coroutineScope {
+            val results = commands.map { command ->
+                async(Dispatchers.IO) { executeOne(command) }
+            }.awaitAll()
+            results.joinToString("\n")
+        }
+    }
 
-        for (command in commands) {
-            val device = repository.getDeviceByMac(command.deviceId)
-            if (device == null) {
-                results.add("❌ Устройство с ID '${command.deviceId}' не найдено в БД.")
-                continue
+    /**
+     * Выполнить одну команду с идемпотентностью и верификацией.
+     *
+     * Логика:
+     * 1. Если устройство умеет читать состояние — сначала читаем.
+     * 2. Уже в целевом состоянии → ничего не отправляем.
+     * 3. Отправили → ждём [VERIFY_DELAY_MS] → читаем снова.
+     * 4. Ответ честно говорит, подтвердилось ли изменение.
+     */
+    private suspend fun executeOne(command: DeviceCommand): String {
+        val device = repository.getDeviceByMac(command.deviceId)
+            ?: return "❌ Устройство с ID '${command.deviceId}' не найдено в БД."
+
+        val controller = router.getController(device.protocol)
+            ?: return "⚠️ ${device.displayName}: протокол ${device.protocol} не поддерживается"
+
+        val controlPort = device.port.let { if (it > 0) it else 0 }
+
+        // Для MiIO-устройств — подкладываем токен из deviceConfig
+        if (controller is MiioController) {
+            val token = parseMiioToken(device.deviceConfig)
+            if (token.isNullOrBlank()) {
+                return "❌ ${device.displayName}: не получен token. Введи токен в настройках."
             }
+            controller.setToken(device.ip, token)
+        }
 
-            val controller = router.getController(device.protocol)
-            if (controller == null) {
-                results.add("⚠️ ${device.displayName}: протокол ${device.protocol} не поддерживается")
-                continue
-            }
+        val stateful = controller as? StatefulController
 
-            val controlPort = device.port.let { if (it > 0) it else 0 }
-
-            // Для MiIO-устройств — подкладываем токен из deviceConfig
-            if (controller is MiioController) {
-                val token = parseMiioToken(device.deviceConfig)
-                if (token.isNullOrBlank()) {
-                    results.add("❌ ${device.displayName}: не получен token. Введи токен в настройках.")
-                    continue
-                }
-                controller.setToken(device.ip, token)
-            }
-
-            val result = executeCommand(controller, device.ip, controlPort, command)
-            if (result.success) {
-                results.add("✅ ${device.displayName}: ${result.message.ifBlank { actionLabel(command.action) }}")
-            } else {
-                results.add("❌ ${device.displayName}: ${result.error ?: "ошибка"}")
+        // 1. Идемпотентность: не дёргаем устройство, если оно уже в нужном состоянии
+        if (stateful != null && command.action in WRITE_ACTIONS) {
+            val before = runCatching { stateful.readState(device.ip, controlPort) }.getOrNull()
+            if (before?.matches(command.action, command.params) == true) {
+                return "ℹ️ ${device.displayName}: уже ${actionLabel(command.action)} — команда не отправлена"
             }
         }
 
-        return results.joinToString("\n")
+        // 2. Сама команда
+        val result = executeCommand(controller, device.ip, controlPort, command)
+        if (!result.success) {
+            return "❌ ${device.displayName}: ${result.error ?: "ошибка"}"
+        }
+
+        val base = "✅ ${device.displayName}: ${result.message.ifBlank { actionLabel(command.action) }}"
+        if (stateful == null || command.action !in WRITE_ACTIONS) return base
+
+        // 3. Верификация: перечитываем состояние
+        delay(VERIFY_DELAY_MS)
+        val after = runCatching { stateful.readState(device.ip, controlPort) }.getOrNull()
+        return when (after?.matches(command.action, command.params)) {
+            true -> "$base (подтверждено)"
+            false -> "⚠️ ${device.displayName}: команда отправлена, но состояние не изменилось (сейчас: ${after?.describe() ?: "?"})"
+            null -> "$base (состояние проверить не удалось)"
+        }
     }
 
     /**
@@ -120,11 +164,21 @@ class SmartHomeDispatcher @Inject constructor(
                 controller.customCommand(ip, port, "fan_speed", mapOf("speed" to speed))
             }
             "get_status" -> {
-                val online = controller.ping(ip, port)
-                if (online) {
-                    controller.customCommand(ip, port, "status", emptyMap())
+                // У протоколов с чтением состояния спрашиваем их самих,
+                // иначе «status» уходил невалидным запросом (Yeelight/WiZ/WLED).
+                val stateful = controller as? StatefulController
+                val state = if (stateful != null) {
+                    runCatching { stateful.readState(ip, port) }.getOrNull()
+                } else null
+                if (state != null) {
+                    ControlResult(success = true, message = state.describe())
                 } else {
-                    ControlResult(false, error = "Устройство недоступно")
+                    val online = controller.ping(ip, port)
+                    if (online) {
+                        controller.customCommand(ip, port, "status", emptyMap())
+                    } else {
+                        ControlResult(false, error = "Устройство недоступно")
+                    }
                 }
             }
             "charge" -> {

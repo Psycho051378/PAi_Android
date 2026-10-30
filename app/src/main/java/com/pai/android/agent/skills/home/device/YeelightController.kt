@@ -1,5 +1,9 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.identity.DeviceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -21,7 +25,7 @@ import javax.inject.Singleton
  * Yeelight поддерживает до 4 одновременных соединений — этого достаточно.
  */
 @Singleton
-class YeelightController @Inject constructor() : DeviceController {
+class YeelightController @Inject constructor() : StatefulController {
 
     override val protocol: String = "YEELIGHT"
 
@@ -139,5 +143,51 @@ class YeelightController @Inject constructor() : DeviceController {
     private fun extractErrorMessage(response: String): String {
         val msgRegex = """"message"\s*:\s*"([^"]+)"""".toRegex()
         return msgRegex.find(response)?.groupValues?.getOrNull(1) ?: "неизвестная ошибка"
+    }
+
+    // ================== Чтение состояния (StatefulController) ==================
+
+    /**
+     * get_prop отдаёт состояние и заодно имя/модель устройства.
+     * Порядок значений в ответе = порядок в запросе.
+     */
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val array = readProps(ip, port) ?: return@withContext null
+        fun value(index: Int): String? =
+            if (index < array.length()) array.optString(index, null)?.takeIf { it.isNotBlank() } else null
+
+        val rgbInt = value(3)?.toIntOrNull()
+        DeviceState(
+            power = value(0)?.equals("on", ignoreCase = true),
+            brightness = value(1)?.toIntOrNull(),
+            colorTempKelvin = value(2)?.toIntOrNull()?.takeIf { it in 1000..10000 },
+            rgb = if (rgbInt != null && rgbInt > 0) {
+                Triple((rgbInt shr 16) and 0xFF, (rgbInt shr 8) and 0xFF, rgbInt and 0xFF)
+            } else null
+        )
+    }
+
+    private fun readProps(ip: String, port: Int): JSONArray? {
+        val effectivePort = if (port > 0) port else DEFAULT_PORT
+        val id = synchronized(this) { ++requestId }
+        val payload = """{"id":$id,"method":"get_prop","params":["power","bright","ct","rgb","name","model"]}"""
+        var socket: Socket? = null
+        return try {
+            socket = Socket()
+            socket.connect(InetSocketAddress(ip, effectivePort), TIMEOUT_MS)
+            socket.soTimeout = TIMEOUT_MS
+
+            val writer = OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8)
+            writer.write("$payload\r\n")
+            writer.flush()
+
+            val reader = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
+            val line = reader.readLine() ?: return null
+            org.json.JSONObject(line).optJSONArray("result")
+        } catch (e: Exception) {
+            null
+        } finally {
+            try { socket?.close() } catch (_: Exception) { }
+        }
     }
 }

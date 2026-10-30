@@ -1,5 +1,8 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.identity.DeviceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -32,7 +35,7 @@ import javax.inject.Singleton
  * Все методы thread-safe (каждый вызов создаёт свой HTTP-запрос).
  */
 @Singleton
-class ShellyController @Inject constructor() : DeviceController {
+class ShellyController @Inject constructor() : StatefulController {
 
     override val protocol: String = "SHELLY"
 
@@ -343,6 +346,67 @@ class ShellyController @Inject constructor() : DeviceController {
             error?.optString("message", "неизвестная ошибка") ?: "неизвестная ошибка"
         } catch (e: Exception) {
             "неизвестная ошибка"
+        }
+    }
+
+    // ═══════════════════ Чтение состояния (StatefulController) ═══════════════════
+
+    /**
+     * Shelly умеет отдавать состояние и в Gen2 (RPC), и в Gen1 (/status, /relay/0).
+     * Пробуем по порядку: Switch → Light → Gen1 /status → Gen1 /relay/0.
+     */
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val effectivePort = if (port > 0) port else DEFAULT_PORT
+
+        // Gen2: реле
+        fetchJson("http://$ip:$effectivePort/rpc/Switch.GetStatus?id=0")?.optJSONObject("result")?.let { r ->
+            if (r.has("output")) {
+                return@withContext DeviceState(power = r.optBoolean("output"))
+            }
+        }
+
+        // Gen2: лампа
+        fetchJson("http://$ip:$effectivePort/rpc/Light.GetStatus?id=0")?.optJSONObject("result")?.let { r ->
+            if (r.has("output")) {
+                return@withContext DeviceState(
+                    power = r.optBoolean("output"),
+                    brightness = if (r.has("brightness")) r.optInt("brightness") else null,
+                    colorTempKelvin = if (r.has("temp")) r.optInt("temp").takeIf { it > 0 } else null
+                )
+            }
+        }
+
+        // Gen1: полный статус
+        fetchJson("http://$ip:$effectivePort/status")?.let { json ->
+            val relay = json.optJSONArray("relays")?.optJSONObject(0)
+            if (relay != null && relay.has("ison")) {
+                return@withContext DeviceState(power = relay.optBoolean("ison"))
+            }
+            val light = json.optJSONArray("lights")?.optJSONObject(0)
+            if (light != null && light.has("ison")) {
+                return@withContext DeviceState(
+                    power = light.optBoolean("ison"),
+                    brightness = if (light.has("brightness")) light.optInt("brightness") else null
+                )
+            }
+        }
+
+        // Gen1: канал 0
+        fetchJson("http://$ip:$effectivePort/relay/0")?.let { json ->
+            if (json.has("ison")) return@withContext DeviceState(power = json.optBoolean("ison"))
+        }
+
+        null
+    }
+
+    private fun fetchJson(url: String): JSONObject? {
+        return try {
+            val response = httpClient.newCall(Request.Builder().url(url).build()).execute()
+            val body = response.body?.string() ?: ""
+            response.close()
+            if (body.isBlank()) null else JSONObject(body)
+        } catch (e: Exception) {
+            null
         }
     }
 }

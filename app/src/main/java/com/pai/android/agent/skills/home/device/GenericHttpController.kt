@@ -1,5 +1,8 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.identity.DeviceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -33,7 +36,7 @@ import javax.inject.Singleton
  * ```
  */
 @Singleton
-class GenericHttpController @Inject constructor() : DeviceController {
+class GenericHttpController @Inject constructor() : StatefulController {
 
     override val protocol: String = "GENERIC_HTTP"
 
@@ -214,6 +217,17 @@ class GenericHttpController @Inject constructor() : DeviceController {
     /**
      * Выполнить HTTP GET запрос.
      */
+    // ═══════════════════ Чтение состояния (StatefulController) ═══════════════════
+
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val json = getWledState(ip, port) ?: return@withContext null
+        val bri = if (json.has("bri")) json.optInt("bri", -1) else -1
+        DeviceState(
+            power = if (json.has("on")) json.optBoolean("on") else null,
+            brightness = if (bri >= 0) (bri * 100 / 255).coerceIn(0, 100) else null
+        )
+    }
+
     private suspend fun executeHttpGet(ip: String, port: Int, path: String): ControlResult {
         return try {
             val url = if (path.startsWith("http")) path else "http://$ip:$port$path"

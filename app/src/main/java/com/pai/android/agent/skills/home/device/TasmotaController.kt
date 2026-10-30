@@ -1,5 +1,8 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.identity.DeviceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -24,7 +27,7 @@ import javax.inject.Singleton
  * Tasmota возвращает JSON: {"POWER":"ON"}, {"Dimmer":50}, {"Color":"00FF00"}
  */
 @Singleton
-class TasmotaController @Inject constructor() : DeviceController {
+class TasmotaController @Inject constructor() : StatefulController {
 
     override val protocol: String = "TASMOTA"
 
@@ -191,5 +194,48 @@ class TasmotaController @Inject constructor() : DeviceController {
         "turbo", "high", "max" -> 3
         "max", "full" -> 4
         else -> 2
+    }
+
+    // ═══════════════════ Чтение состояния (StatefulController) ═══════════════════
+
+    /**
+     * StatusSTS (Status 8) — самый лёгкий ответ с текущим состоянием.
+     * Если его нет (старая прошивка), падаем обратно на Status 0.
+     */
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val effectivePort = if (port > 0) port else DEFAULT_PORT
+        val sts = fetchJson("http://$ip:$effectivePort/cm?cmnd=Status%208")?.optJSONObject("StatusSTS")
+            ?: fetchJson("http://$ip:$effectivePort/cm?cmnd=Status%200")?.optJSONObject("StatusSTS")
+            ?: return@withContext null
+
+        val power = sts.optString("POWER", null)?.let { it.equals("ON", ignoreCase = true) }
+        val dimmer = sts.optInt("Dimmer", -1).takeIf { it in 0..100 }
+        val ct = sts.optInt("CT", -1).takeIf { it in 150..500 }
+            ?.let { ((it - 200).coerceAtLeast(0) * 4500 / 300) + 2000 }
+        val color = sts.optString("Color", null)?.takeIf { it.length >= 6 }
+        val rgb = color?.let {
+            try {
+                Triple(
+                    it.substring(0, 2).toInt(16),
+                    it.substring(2, 4).toInt(16),
+                    it.substring(4, 6).toInt(16)
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        DeviceState(power = power, brightness = dimmer, colorTempKelvin = ct, rgb = rgb)
+    }
+
+    private fun fetchJson(url: String): JSONObject? {
+        return try {
+            val response = httpClient.newCall(Request.Builder().url(url).build()).execute()
+            val body = response.body?.string() ?: ""
+            response.close()
+            if (body.isBlank()) null else JSONObject(body)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

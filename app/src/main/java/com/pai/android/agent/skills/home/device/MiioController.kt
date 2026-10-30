@@ -1,6 +1,9 @@
 package com.pai.android.agent.skills.home.device
 
 import com.chaquo.python.Python
+import com.pai.android.agent.skills.home.identity.DeviceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -17,7 +20,7 @@ import javax.inject.Singleton
  * токен обновляется из deviceConfig в SmartHomeDispatcher.
  */
 @Singleton
-class MiioController @Inject constructor() : DeviceController {
+class MiioController @Inject constructor() : StatefulController {
 
     override val protocol: String = "MIIO"
 
@@ -27,6 +30,12 @@ class MiioController @Inject constructor() : DeviceController {
     companion object {
         private const val MODULE = "miio_control"
         private const val FUNCTION = "control"
+
+        /** Состояния пылесоса, означающие «едет/убирает». */
+        private val ACTIVE_STATES = setOf(
+            "cleaning", "returning", "spot", "zoned_clean", "segment_clean", "paused"
+        )
+        private val IDLE_STATES = setOf("docked", "charging", "idle", "unknown")
     }
 
     fun setToken(ip: String, token: String) {
@@ -64,33 +73,62 @@ class MiioController @Inject constructor() : DeviceController {
         return callPython(ip, command, jsonParams)
     }
 
+    /**
+     * Состояние пылесоса через get_prop (state, battery, ...).
+     */
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val json = invokePython(ip, "status") ?: return@withContext null
+        val result = json.optJSONArray("result") ?: return@withContext null
+
+        val state = result.optString(0, "").lowercase()
+        val batteryRaw = result.optString(1, "")
+        val battery = batteryRaw.toIntOrNull() ?: result.optInt(1, -1).takeIf { it in 0..100 }
+
+        val power = when {
+            state.isBlank() -> null
+            state in ACTIVE_STATES -> true
+            state in IDLE_STATES -> false
+            else -> null
+        }
+
+        DeviceState(
+            power = power,
+            battery = battery,
+            extra = mapOf("miio_state" to state)
+        )
+    }
+
+    // ═══════════════════ Внутренняя реализация ═══════════════════
+
     private fun callPython(ip: String, command: String, paramsJson: String = "{}"): ControlResult {
-        val token = tokenCache[ip]
-        if (token == null) {
+        if (tokenCache[ip] == null) {
             return ControlResult(
                 success = false,
                 error = "Токен не найден для $ip. Авторизуй Xiaomi в настройках."
             )
         }
 
+        val json = invokePython(ip, command, paramsJson)
+            ?: return ControlResult(success = false, error = "MiIO: устройство не ответило")
+
+        return if (json.optString("status") == "ok") {
+            ControlResult(success = true, message = "✅ ${json.optString("result", "OK")}")
+        } else {
+            ControlResult(success = false, error = json.optString("error", "Ошибка MiIO"))
+        }
+    }
+
+    /** Вызов Python-модуля с разбором JSON-ответа. null — ошибка или отсутствие токена. */
+    private fun invokePython(ip: String, command: String, paramsJson: String = "{}"): JSONObject? {
+        val token = tokenCache[ip] ?: return null
         return try {
             val python = Python.getInstance()
             val module = python.getModule(MODULE)
             val result = module.callAttr(FUNCTION, ip, token, command, paramsJson)
-            val resultStr = result.toString()
-
-            try {
-                val json = JSONObject(resultStr)
-                if (json.optString("status") == "ok") {
-                    ControlResult(success = true, message = "✅ ${json.optString("result", "OK")}")
-                } else {
-                    ControlResult(success = false, error = json.optString("error", "Ошибка MiIO"))
-                }
-            } catch (e: Exception) {
-                ControlResult(success = true, message = resultStr)
-            }
+            JSONObject(result.toString())
         } catch (e: Exception) {
-            ControlResult(success = false, error = "MiIO: ${e.message ?: "неизвестная ошибка"}")
+            println("MiioController: python error — ${e.message}")
+            null
         }
     }
 }

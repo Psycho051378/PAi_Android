@@ -1,5 +1,10 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.identity.DeviceState
+import com.pai.android.agent.skills.home.net.LanNetwork
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -26,7 +31,9 @@ import javax.inject.Singleton
  * Используется в BlindDispatcher для работы «вслепую».
  */
 @Singleton
-class WizController @Inject constructor() : DeviceController {
+class WizController @Inject constructor(
+    private val lanNetwork: LanNetwork
+) : StatefulController {
 
     override val protocol: String = "WIZ"
 
@@ -166,16 +173,17 @@ class WizController @Inject constructor() : DeviceController {
     private suspend fun sendBroadcast(payload: String): ControlResult {
         return try {
             val socket = DatagramSocket()
+            // Без привязки к Wi-Fi broadcast уходит в VPN-туннель (проверено на WARP)
+            lanNetwork.bind(socket)
             socket.broadcast = true
             socket.soTimeout = 500
 
             val data = payload.toByteArray(Charsets.UTF_8)
-            val packet = DatagramPacket(
-                data, data.size,
-                InetAddress.getByName(BROADCAST_ADDR),
-                DEFAULT_PORT
-            )
-            socket.send(packet)
+            // Broadcast подсети надёжнее глобального
+            val targets = listOfNotNull(lanNetwork.broadcastAddress(), BROADCAST_ADDR).distinct()
+            for (target in targets) {
+                socket.send(DatagramPacket(data, data.size, InetAddress.getByName(target), DEFAULT_PORT))
+            }
 
             // Короткое ожидание — собираем статистику ответов
             var replies = 0
@@ -233,6 +241,62 @@ class WizController @Inject constructor() : DeviceController {
             ControlResult(success = false, error = "Таймаут — устройство не ответило за ${TIMEOUT_MS}мс")
         } catch (e: Exception) {
             ControlResult(success = false, error = e.message ?: "Неизвестная ошибка")
+        }
+    }
+
+    // ================== Чтение состояния (StatefulController) ==================
+
+    /**
+     * Текущее состояние лампы: getPilot возвращает state/dimming/temp/rgb
+     * одним ответом — этого достаточно и для верификации, и для идемпотентности.
+     */
+    override suspend fun readState(ip: String, port: Int): DeviceState? = withContext(Dispatchers.IO) {
+        val raw = requestRaw(ip, port, """{"method":"getPilot","params":{}}""") ?: return@withContext null
+        parsePilotState(raw)
+    }
+
+    private fun requestRaw(ip: String, port: Int, payload: String, timeoutMs: Int = 1200): String? {
+        var socket: DatagramSocket? = null
+        return try {
+            socket = DatagramSocket()
+            lanNetwork.bind(socket)
+            socket.soTimeout = timeoutMs
+            val effectivePort = if (port > 0) port else DEFAULT_PORT
+            val data = payload.toByteArray(Charsets.UTF_8)
+            socket.send(DatagramPacket(data, data.size, InetAddress.getByName(ip), effectivePort))
+            val buffer = ByteArray(MAX_PACKET_SIZE)
+            val packet = DatagramPacket(buffer, buffer.size)
+            socket.receive(packet)
+            String(packet.data, 0, packet.length, Charsets.UTF_8)
+        } catch (e: Exception) {
+            null
+        } finally {
+            try { socket?.close() } catch (_: Exception) { }
+        }
+    }
+
+    private fun parsePilotState(raw: String): DeviceState? {
+        return try {
+            val result = JSONObject(raw).optJSONObject("result") ?: return null
+            // Новые прошивки WiZ отдают temp в Кельвинах, старые — в процентах
+            val rawTemp = if (result.has("temp")) result.optInt("temp", -1) else -1
+            val kelvin = if (rawTemp in 1000..10000) rawTemp else null
+            val rgb = if (result.has("r") && result.has("g") && result.has("b")) {
+                Triple(
+                    result.optInt("r", 0).coerceIn(0, 255),
+                    result.optInt("g", 0).coerceIn(0, 255),
+                    result.optInt("b", 0).coerceIn(0, 255)
+                )
+            } else null
+
+            DeviceState(
+                power = if (result.has("state")) result.optBoolean("state") else null,
+                brightness = if (result.has("dimming")) result.optInt("dimming", 0) else null,
+                colorTempKelvin = kelvin,
+                rgb = rgb
+            )
+        } catch (e: Exception) {
+            null
         }
     }
 }

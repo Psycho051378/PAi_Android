@@ -1,5 +1,9 @@
 package com.pai.android.agent.skills.home.device
 
+import com.pai.android.agent.skills.home.TcpScanner
+import com.pai.android.agent.skills.home.identity.IdentityHit
+import com.pai.android.agent.skills.home.identity.IdentityRegistry
+import com.pai.android.agent.skills.home.net.LanNetwork
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -32,7 +36,10 @@ class BlindDispatcher @Inject constructor(
     private val shellyController: ShellyController,
     private val tasmotaController: TasmotaController,
     private val genericHttpController: GenericHttpController,
-    private val tpLinkKasaController: TpLinkKasaController
+    private val tpLinkKasaController: TpLinkKasaController,
+    private val identityRegistry: IdentityRegistry,
+    private val deviceRouter: DeviceControllerRouter,
+    private val lanNetwork: LanNetwork
 ) {
     private val TAG = "BlindDispatcher"
 
@@ -45,6 +52,8 @@ class BlindDispatcher @Inject constructor(
         private const val MAX_PING_SWEEP = 254
         /** Сколько параллельных probe (TCP connect) запускать. */
         private const val PROBE_PARALLELISM = 30
+        /** Сколько ждать broadcast-ответов перед «поливом». */
+        private const val GUIDED_SCAN_MS = 1200
         /** HTTP порт для Shelly / Tasmota / WLED probe. */
         private const val HTTP_PORT = 80
         /** Таймаут для HTTP probe. */
@@ -76,7 +85,23 @@ class BlindDispatcher @Inject constructor(
     ): String {
         val results = mutableListOf<String>()
 
-        // 1. WiZ broadcast (всегда — fire-and-forget)
+        // 0. ГЛАВНОЕ: сначала спрашиваем устройства, кто они.
+        //    WiZ/Yeelight отвечают на broadcast вместе с MAC, моделью и состоянием.
+        //    Если устройства опознаны — команда уходит unicast'ом и только тем,
+        //    кто вообще умеет это действие. Никакого «полива» в этом случае нет.
+        try {
+            val hits = identityRegistry.broadcastScan(GUIDED_SCAN_MS)
+            if (hits.isNotEmpty()) {
+                println("BlindDispatcher: guided mode — опознано ${hits.size} устройств")
+                val guided = guidedDispatch(action, params, hits)
+                if (guided.isNotEmpty()) return guided.joinToString("\n")
+                println("BlindDispatcher: guided mode — ни одно устройство не приняло действие")
+            }
+        } catch (e: Exception) {
+            println("BlindDispatcher: guided mode error — ${e.message}")
+        }
+
+        // 1. WiZ broadcast (fire-and-forget, если опознать никого не удалось)
         println("BlindDispatcher: WiZ broadcast: action=$action params=$params")
         try {
             val wizResult = wizController.broadcast(action, params)
@@ -541,6 +566,75 @@ class BlindDispatcher @Inject constructor(
         }
     }
 
+    // ================== Guided-режим ==================
+
+    /**
+     * Адресная отправка команды опознанным устройствам.
+     *
+     * @param action действие
+     * @param params параметры
+     * @param hits устройства, которые представились сами
+     * @return строки результата (пусто, если ни одно устройство не подошло)
+     */
+    private suspend fun guidedDispatch(
+        action: String,
+        params: Map<String, Any>,
+        hits: List<IdentityHit>
+    ): List<String> {
+        val required = requiredCapability(action)
+        val results = mutableListOf<String>()
+
+        for (hit in hits) {
+            // Не отправляем «яркость» реле, у которого её нет
+            if (required != null && hit.capabilities.isNotEmpty() && required !in hit.capabilities) {
+                println("BlindDispatcher: skip ${hit.ip} — нет capability '$required'")
+                continue
+            }
+            val controller = deviceRouter.getController(hit.protocol)
+            if (controller == null) {
+                println("BlindDispatcher: skip ${hit.ip} — нет контроллера для ${hit.protocol}")
+                continue
+            }
+
+            val result = runAction(controller, hit.ip, hit.port, action, params)
+            if (result.success) {
+                results.add("✅ ${hit.describe()} (${hit.ip}): ${result.message.ifBlank { "готово" }}")
+            } else {
+                results.add("❌ ${hit.describe()} (${hit.ip}): ${result.error ?: "ошибка"}")
+            }
+        }
+        return results
+    }
+
+    /** Минимальная capability, без которой действие бессмысленно. */
+    private fun requiredCapability(action: String): String? = when (action) {
+        "turn_on", "turn_off", "start", "stop" -> "on_off"
+        "set_brightness" -> "brightness"
+        "set_rgb" -> "rgb"
+        "set_color_temp" -> "color_temp"
+        else -> null
+    }
+
+    private suspend fun runAction(
+        controller: DeviceController,
+        ip: String,
+        port: Int,
+        action: String,
+        params: Map<String, Any>
+    ): ControlResult = when (action) {
+        "turn_on", "start" -> controller.turnOn(ip, port)
+        "turn_off", "stop" -> controller.turnOff(ip, port)
+        "set_brightness" -> controller.setBrightness(ip, port, (params["level"] as? Number)?.toInt() ?: 50)
+        "set_color_temp" -> controller.setColorTemp(ip, port, (params["temp"] as? Number)?.toInt() ?: 3500)
+        "set_rgb" -> controller.setRGB(
+            ip, port,
+            (params["r"] as? Number)?.toInt() ?: 255,
+            (params["g"] as? Number)?.toInt() ?: 255,
+            (params["b"] as? Number)?.toInt() ?: 255
+        )
+        else -> controller.customCommand(ip, port, action, params)
+    }
+
     // ================== Утилиты ==================
 
     /**
@@ -586,31 +680,21 @@ class BlindDispatcher @Inject constructor(
      * @param subnet префикс подсети, например "192.168.1"
      * @return список живых IP
      */
+    /**
+     * Проверка живых хостов.
+     *
+     * Раньше здесь был InetAddress.isReachable: на Android у приложения нет
+     * CAP_NET_RAW, ICMP не отправляется, и Java откатывается на TCP-echo (порт 7),
+     * который почти никто не держит. Итог — пустой «ping sweep» и слепой режим,
+     * который ничего не находил. Теперь живой хост = открытый TCP-порт.
+     */
     private fun pingSweep(subnet: String): List<String> {
-        println("BlindDispatcher: ping sweep $subnet.1-254")
-        val alive = mutableListOf<String>()
-        val threads = mutableListOf<Thread>()
-
-        for (i in 1..MAX_PING_SWEEP) {
-            val ip = "$subnet.$i"
-            val t = Thread {
-                try {
-                    val addr = InetAddress.getByName(ip)
-                    if (addr.isReachable(PING_TIMEOUT_MS)) {
-                        synchronized(alive) { alive.add(ip) }
-                    }
-                } catch (_: Exception) {}
-            }
-            threads.add(t)
-            t.start()
-        }
-
-        for (t in threads) {
-            try { t.join(5000) } catch (_: Exception) {}
-        }
-
-        println("BlindDispatcher: ping sweep done — ${alive.size} alive hosts")
-        return alive.toList()
+        val parts = subnet.split(".")
+        if (parts.size < 3) return emptyList()
+        val ips = (1..MAX_PING_SWEEP).map { "${parts[0]}.${parts[1]}.${parts[2]}.$it" }
+        val alive = TcpScanner.aliveHosts(ips, network = lanNetwork.wifiNetwork())
+        println("BlindDispatcher: TCP liveness — ${alive.size} hosts из ${ips.size}")
+        return alive
     }
 
     /**
