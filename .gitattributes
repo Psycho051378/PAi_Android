@@ -1,0 +1,4 @@
+
+# Keep the Unix wrapper runnable on Linux and macOS
+gradlew text eol=lf
+gradlew.bat text eol=crlf
