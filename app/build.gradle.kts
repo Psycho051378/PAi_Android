@@ -75,7 +75,9 @@ chaquopy {
         pip {
             install("requests")
             install("aiohttp")
-            install("beautifulsoup4")
+            // Pinned: свежие версии soupsieve требуют Python >= 3.11.5, а Chaquopy ставит 3.11.0
+            install("beautifulsoup4==4.12.3")
+            install("soupsieve==2.5")
             install("flask")
             install("openpyxl")
             install("python-docx")
