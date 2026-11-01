@@ -68,6 +68,5 @@ baseline.json
 /tools/
 
 # Local service material (never published)
-/docs/
 /smart_home_test_server.py
 /CHANGES_*.md

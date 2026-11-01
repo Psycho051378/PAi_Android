@@ -1,0 +1,409 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "PAi Android — жизненный цикл задачи агента",
+    "output": "docs/pai-agent-workflow.ru.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Psycho051378/PAi_Android",
+      "revision": "3b21f0e872f63892a1e2a7a22411669e3e11be8d",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "lanes": [
+    {
+      "id": "client",
+      "label": "Клиент"
+    },
+    {
+      "id": "core",
+      "label": "Ядро: репозиторий и решение"
+    },
+    {
+      "id": "model",
+      "label": "Модели",
+      "variant": "exception"
+    },
+    {
+      "id": "exec",
+      "label": "Исполнение агента"
+    },
+    {
+      "id": "skills",
+      "label": "Скиллы и Python"
+    },
+    {
+      "id": "out",
+      "label": "Ответ"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "Приём",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "route",
+      "label": "Маршрут",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "process",
+      "label": "Обработка",
+      "fromCol": 3,
+      "toCol": 4
+    },
+    {
+      "id": "reply",
+      "label": "Ответ",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "user",
+    "ui",
+    "vm",
+    "repo",
+    "de",
+    "react",
+    "answer"
+  ],
+  "nodes": [
+    {
+      "id": "user",
+      "lane": "client",
+      "col": 0,
+      "type": "external",
+      "label": "Пользователь",
+      "sublabel": "текст или голос",
+      "width": 132
+    },
+    {
+      "id": "ui",
+      "lane": "client",
+      "col": 1,
+      "type": "frontend",
+      "label": "Compose UI",
+      "sublabel": "чат и экраны",
+      "width": 132,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/MainActivity.kt",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "id": "vm",
+      "lane": "client",
+      "col": 2,
+      "type": "frontend",
+      "label": "ViewModel",
+      "sublabel": "ChatDetailViewModel",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/presentation/chat/ChatDetailViewModel.kt",
+          "line": 340
+        }
+      ]
+    },
+    {
+      "id": "repo",
+      "lane": "core",
+      "col": 2,
+      "type": "backend",
+      "label": "AiRepository",
+      "sublabel": "контекст-окно",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/repository/AiRepository.kt",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "id": "de",
+      "lane": "core",
+      "col": 3,
+      "type": "backend",
+      "label": "DecisionEngine",
+      "sublabel": "навык · план · ReAct",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/DecisionEngine.kt",
+          "line": 352
+        }
+      ]
+    },
+    {
+      "id": "net",
+      "lane": "model",
+      "col": 3,
+      "type": "cloud",
+      "label": "Сетевой провайдер",
+      "sublabel": "DeepSeek · OpenAI",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/data/model/ProviderSettings.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "planner",
+      "lane": "exec",
+      "col": 4,
+      "type": "backend",
+      "label": "Планировщик",
+      "sublabel": "запрос · AgentPlanner",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/AgentPlanner.kt",
+          "line": 37
+        }
+      ],
+      "yOffset": -140
+    },
+    {
+      "id": "taskq",
+      "lane": "exec",
+      "col": 4,
+      "yOffset": 96,
+      "type": "backend",
+      "label": "TaskQueue",
+      "sublabel": "проект · по шагам",
+      "width": 134,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/TaskQueue.kt",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "react",
+      "lane": "exec",
+      "col": 5,
+      "type": "backend",
+      "label": "ReAct-цикл",
+      "sublabel": "шаги агента",
+      "width": 124,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/ReActAgent.kt",
+          "line": 25
+        }
+      ],
+      "yOffset": -140
+    },
+    {
+      "id": "codegen",
+      "lane": "exec",
+      "col": 5,
+      "yOffset": 96,
+      "type": "backend",
+      "label": "CodeGenerator",
+      "sublabel": "файлы и exec",
+      "width": 124,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/CodeGenerator.kt",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "lane": "skills",
+      "col": 3,
+      "type": "backend",
+      "label": "Скиллы и инструменты",
+      "sublabel": "SkillRegistry · tools",
+      "width": 150,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/Skill.kt",
+          "line": 99
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "lane": "skills",
+      "col": 4,
+      "type": "backend",
+      "label": "Python (Chaquopy)",
+      "sublabel": "PythonSkill",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/skills/PythonSkill.kt",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "lane": "skills",
+      "col": 5,
+      "type": "database",
+      "label": "Файлы workspace",
+      "sublabel": "проверка и запись",
+      "width": 140,
+      "sources": [
+        {
+          "path": "app/src/main/java/com/pai/android/agent/FileManager.kt",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "id": "answer",
+      "lane": "out",
+      "col": 5,
+      "type": "backend",
+      "label": "Ответ пользователю",
+      "sublabel": "текст или файл",
+      "width": 140
+    }
+  ],
+  "edges": [
+    {
+      "id": "u-ui",
+      "from": "user",
+      "to": "ui"
+    },
+    {
+      "id": "ui-vm",
+      "from": "ui",
+      "to": "vm"
+    },
+    {
+      "id": "vm-repo",
+      "from": "vm",
+      "to": "repo",
+      "label": "sendMessage"
+    },
+    {
+      "id": "repo-de",
+      "from": "repo",
+      "to": "de",
+      "label": "processQuery"
+    },
+    {
+      "id": "repo-net",
+      "from": "repo",
+      "to": "net",
+      "label": "LLM"
+    },
+    {
+      "id": "de-planner",
+      "from": "de",
+      "to": "planner",
+      "label": "план",
+      "role": "branch"
+    },
+    {
+      "id": "de-taskq",
+      "from": "de",
+      "to": "taskq",
+      "label": "проект",
+      "role": "branch"
+    },
+    {
+      "id": "de-react",
+      "from": "de",
+      "to": "react",
+      "label": "шаги",
+      "role": "branch"
+    },
+    {
+      "id": "de-skills",
+      "from": "de",
+      "to": "skills",
+      "label": "навык",
+      "role": "branch"
+    },
+    {
+      "id": "taskq-codegen",
+      "from": "taskq",
+      "to": "codegen"
+    },
+    {
+      "id": "codegen-files",
+      "from": "codegen",
+      "to": "files",
+      "label": "запись"
+    },
+    {
+      "id": "skills-python",
+      "from": "skills",
+      "to": "python"
+    },
+    {
+      "id": "python-files",
+      "from": "python",
+      "to": "files"
+    },
+    {
+      "id": "react-answer",
+      "from": "react",
+      "to": "answer",
+      "label": "ответ"
+    },
+    {
+      "id": "files-answer",
+      "from": "files",
+      "to": "answer",
+      "label": "файл-ответ"
+    },
+    {
+      "id": "planner-react",
+      "from": "planner",
+      "to": "react",
+      "label": "план >2 шагов",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Решение",
+      "items": [
+        "DecisionEngine выбирает: навык / план / ReAct",
+        "Контекст-окно и провайдер берёт AiRepository",
+        "Планировщик запроса (AgentPlanner) собирает план шагов и сам зовёт LLM",
+        "План >2 шагов → делегирование в ReAct-цикл"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Исполнение",
+      "items": [
+        "TaskQueue ведёт проект по шагам",
+        "CodeGenerator пишет файлы и запускает Python"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Контроль",
+      "items": [
+        "Сгенерированный код проверяется перед запуском",
+        "Пути не выходят за workspace"
+      ]
+    }
+  ]
+}
